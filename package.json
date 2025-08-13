@@ -1,0 +1,45 @@
+{
+  "name": "space-social-network",
+  "version": "1.0.0",
+  "description": "A modern space-themed social network application",
+  "main": "index.html",
+  "scripts": {
+    "start": "node server-multi-db.js",
+    "dev": "node server-multi-db.js",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "static": "http-server -p 3000 -o -c-1",
+    "build": "echo 'Building application...'",
+    "lint": "eslint assets/js/**/*.js"
+  },
+  "keywords": [
+    "social-network",
+    "space-theme",
+    "web-app",
+    "javascript",
+    "html",
+    "css"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "font-awesome": "^4.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.18.0",
+    "mongoose": "^8.17.1",
+    "neo4j-driver": "^5.28.1",
+    "pg": "^8.16.3",
+    "redis": "^5.8.0"
+  }
+}

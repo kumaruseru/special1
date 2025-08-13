@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # Node.js Application
+  app:
+    build: .
+    container_name: cosmic-social-app
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - MONGODB_URI=mongodb://admin:cosmic123@mongodb:27017/cosmic_social_network?authSource=admin
+      - REDIS_URL=redis://:cosmic123@redis:6379
+      - DATABASE_URL=postgresql://admin:cosmic123@postgres:5432/cosmic_social_network
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=cosmic123
+      - JWT_SECRET=f9e396d9e9c8e20d10429fa3414ee792570dc4eee89d07b9db0a5f320dae6206221d8f07bc30058e6f1a04b65ac93fb91e34fb076a200a6ebed5155472873e984
+      - CORS_ORIGIN=http://localhost:8080
+    depends_on:
+      - mongodb
+      - redis
+      - postgres
+      - neo4j
+    networks:
+      - cosmic-network
+    restart: unless-stopped
+    command: node server.js
+
+  # MongoDB - Document Database (User profiles, posts, content)
+  mongodb:
+    image: mongo:7
+    container_name: cosmic-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    environment:
+      - MONGO_INITDB_DATABASE=cosmic_social_network
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=cosmic123
+    networks:
+      - cosmic-network
+    restart: unless-stopped
+
+  # Redis - Cache & Session Store (Real-time data, sessions, notifications)
+  redis:
+    image: redis:7-alpine
+    container_name: cosmic-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --requirepass cosmic123 --appendonly yes
+    networks:
+      - cosmic-network
+    restart: unless-stopped
+
+  # PostgreSQL - Relational Database (Analytics, transactions, logs)
+  postgres:
+    image: postgres:15
+    container_name: cosmic-postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_DB=cosmic_social_network
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=cosmic123
+    networks:
+      - cosmic-network
+    restart: unless-stopped
+
+  # Neo4j - Graph Database (Relationships, social connections, recommendations)
+  neo4j:
+    image: neo4j:5
+    container_name: cosmic-neo4j
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    environment:
+      - NEO4J_AUTH=neo4j/cosmic123
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+      - NEO4J_apoc_import_file_enabled=true
+    networks:
+      - cosmic-network
+    restart: unless-stopped
+
+  # Redis Commander - Redis GUI
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: cosmic-redis-gui
+    hostname: redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:cosmic123
+    networks:
+      - cosmic-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # pgAdmin - PostgreSQL GUI
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: cosmic-pgadmin
+    ports:
+      - "8082:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@cosmic.com
+      - PGADMIN_DEFAULT_PASSWORD=cosmic123
+    networks:
+      - cosmic-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Mongo Express - MongoDB GUI
+  mongo-express:
+    image: mongo-express
+    container_name: cosmic-mongo-gui
+    ports:
+      - "8083:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=cosmic123
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:cosmic123@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=cosmic123
+    networks:
+      - cosmic-network
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  redis_data:
+  postgres_data:
+  neo4j_data:
+  neo4j_logs:
+  pgadmin_data:
+
+networks:
+  cosmic-network:
+    driver: bridge

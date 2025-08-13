@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cosmic Social Network - Homepage</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="assets/css/home.css">
+    <!-- Shared JavaScript -->
+    <script src="assets/js/shared.js"></script>
+</head>
+<body class="w-full min-h-screen">
+
+    <canvas id="cosmic-bg"></canvas>
+
+    <!-- Create Post Popup -->
+    <div id="create-post-popup" class="popup-overlay hidden">
+        <div class="glass-pane popup-content rounded-2xl">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-700/50">
+                <h2 class="text-xl font-bold text-white">Tạo bài viết mới</h2>
+                <button id="close-popup-button" class="bg-gray-700/80 hover:bg-gray-600/80 rounded-full p-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Content -->
+            <div class="p-6 space-y-4">
+                <!-- User Info -->
+                <div class="flex items-center gap-4">
+                    <img id="popup-user-avatar" src="https://placehold.co/48x48/4F46E5/FFFFFF?text=U" alt="User Avatar" class="w-12 h-12 rounded-full border-2 border-indigo-500"/>
+                    <div>
+                        <h3 id="popup-user-name" class="font-bold text-lg text-white">Phi Hành Gia</h3>
+                        <p id="popup-user-email" class="text-sm text-gray-400">@astronaut</p>
+                    </div>
+                </div>
+                
+                <!-- Text Input -->
+                <textarea 
+                    id="post-textarea" 
+                    placeholder="Phi hành gia, bạn đang nghĩ gì? Hãy chia sẻ với cộng đồng vũ trụ! ✨" 
+                    class="popup-textarea w-full"
+                    rows="4"
+                ></textarea>
+                
+                <!-- Image Preview Area -->
+                <div id="image-preview-area" class="hidden">
+                    <div class="relative bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-semibold text-white">Hình ảnh đã chọn</span>
+                            <button id="remove-images" class="text-red-400 hover:text-red-300 text-sm">
+                                Xóa tất cả
+                            </button>
+                        </div>
+                        <div id="image-preview-container" class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                            <!-- Images will be added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tagged Friends Display -->
+                <div id="tagged-friends-area" class="hidden">
+                    <div class="bg-gray-800/30 rounded-lg p-3 border border-gray-700/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-semibold text-white">Đã tag bạn bè</span>
+                            <button id="clear-tags" class="text-red-400 hover:text-red-300 text-sm">
+                                Xóa tất cả
+                            </button>
+                        </div>
+                        <div id="tagged-friends-list" class="flex flex-wrap gap-2">
+                            <!-- Tagged friends will be added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Location Display -->
+                <div id="location-area" class="hidden">
+                    <div class="bg-gray-800/30 rounded-lg p-3 border border-gray-700/50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                                <span id="location-text" class="text-sm text-white"></span>
+                            </div>
+                            <button id="remove-location" class="text-red-400 hover:text-red-300 text-sm">
+                                Xóa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Character Counter -->
+                <div class="flex justify-between items-center text-sm text-gray-400">
+                    <span id="char-counter">0/500</span>
+                    <span class="text-xs">Ấn Ctrl+Enter để đăng nhanh</span>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="p-6 space-y-4 border-t border-gray-700/50">
+                <!-- Options -->
+                <div class="flex items-center justify-between p-4 bg-gray-800/30 rounded-lg">
+                    <span class="font-semibold text-white">Thêm vào bài viết</span>
+                    <div class="flex items-center gap-3">
+                        <button id="add-image-btn" class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors group" title="Thêm hình ảnh">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:stroke-white transition">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                        </button>
+                        <button id="tag-friends-btn" class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors group" title="Tag bạn bè">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:stroke-white transition">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="8.5" cy="7" r="4"></circle>
+                                <polyline points="17 11 19 13 23 9"></polyline>
+                            </svg>
+                        </button>
+                        <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors group" title="Thêm emoji">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:stroke-white transition">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                            </svg>
+                        </button>
+                        <button id="add-location-btn" class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors group" title="Thêm vị trí">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:stroke-white transition">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Hidden File Input -->
+                <input type="file" id="image-input" class="hidden" accept="image/*" multiple>
+                
+                <!-- Submit Button -->
+                <div class="flex gap-3">
+                    <button 
+                        id="submit-post-button" 
+                        disabled 
+                        class="flex-1 main-button font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                        </svg>
+                        Đăng bài viết
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tag Friends Modal -->
+    <div id="tag-friends-modal" class="popup-overlay hidden">
+        <div class="glass-pane rounded-2xl w-full max-w-md mx-4">
+            <div class="flex items-center justify-between p-4 border-b border-gray-700/50">
+                <h3 class="text-lg font-bold text-white">Tag bạn bè</h3>
+                <button id="close-tag-modal" class="bg-gray-700/80 hover:bg-gray-600/80 rounded-full p-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4">
+                <input type="text" id="friend-search" placeholder="Tìm bạn bè..." class="w-full bg-gray-800/50 border border-gray-700/50 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:border-indigo-500 focus:outline-none">
+                <div id="friends-list" class="mt-3 max-h-60 overflow-y-auto space-y-2">
+                    <!-- Friends will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Modal -->
+    <div id="location-modal" class="popup-overlay hidden">
+        <div class="glass-pane rounded-2xl w-full max-w-md mx-4">
+            <div class="flex items-center justify-between p-4 border-b border-gray-700/50">
+                <h3 class="text-lg font-bold text-white">Thêm vị trí</h3>
+                <button id="close-location-modal" class="bg-gray-700/80 hover:bg-gray-600/80 rounded-full p-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4">
+                <input type="text" id="location-search" placeholder="Tìm kiếm địa điểm..." class="w-full bg-gray-800/50 border border-gray-700/50 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:border-indigo-500 focus:outline-none mb-3">
+                <button id="current-location-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg mb-3 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="m4.93 4.93 4.24 4.24"/>
+                        <path d="m14.83 9.17 4.24-4.24"/>
+                        <path d="m14.83 14.83 4.24 4.24"/>
+                        <path d="m9.17 14.83-4.24 4.24"/>
+                    </svg>
+                    Sử dụng vị trí hiện tại
+                </button>
+                <div id="location-suggestions" class="space-y-2">
+                    <!-- Location suggestions will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Page Content -->
+    <div class="relative z-10 container mx-auto grid grid-cols-12 gap-8 px-4 py-8">
+        
+        <!-- Left Sidebar -->
+        <aside class="col-span-12 lg:col-span-3 h-fit sticky top-8">
+            <div class="glass-pane p-4 rounded-2xl space-y-2">
+                <a href="#" class="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-800/50 transition-colors">
+                    <img id="user-avatar" src="https://placehold.co/48x48/4F46E5/FFFFFF?text=U" alt="User Avatar" class="w-12 h-12 rounded-full border-2 border-indigo-500"/>
+                    <div>
+                        <h3 id="user-name" class="font-bold text-lg text-white">Loading...</h3>
+                        <p id="user-email" class="text-sm text-gray-400">@user</p>
+                    </div>
+                </a>
+                <hr class="border-gray-700/50"/>
+                <nav id="main-nav" class="flex flex-col space-y-2">
+                    <a href="index.html" data-page="home" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors text-white bg-gray-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <span>Trang chủ</span>
+                    </a>
+                    <a href="pages/discovery.html" data-page="discovery" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <span>Khám phá</span>
+                    </a>
+                    <a href="pages/friend-requests.html" data-page="friend-requests" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50 relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="8.5" cy="7" r="4"/>
+                            <line x1="20" y1="8" x2="20" y2="14"/>
+                            <line x1="23" y1="11" x2="17" y2="11"/>
+                        </svg>
+                        <span>Lời mời kết bạn</span>
+                        <span id="friend-requests-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
+                    </a>
+                    <a href="pages/messages.html" data-page="messages" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <span>Tin nhắn</span>
+                    </a>
+                    <a href="pages/maps.html" data-page="maps" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>Bản đồ</span>
+                    </a>
+                    <a href="pages/profile.html" data-page="profile" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span>Hồ sơ</span>
+                    </a>
+                     <a href="pages/settings.html" data-page="settings" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <span>Cài đặt</span>
+                    </a>
+                </nav>
+                <hr class="border-gray-700/50 pt-2"/>
+                <button class="w-full logout-button font-bold py-3 rounded-lg flex items-center justify-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                    <span>Đăng xuất</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-content" class="col-span-12 lg:col-span-5 space-y-6">
+            <!-- Home Page Content -->
+            <div id="page-home" class="page-content space-y-6">
+                <div class="glass-pane p-4 rounded-2xl">
+                    <div class="flex items-center gap-4">
+                        <img src="https://placehold.co/48x48/4F46E5/FFFFFF?text=A" alt="User Avatar" class="w-12 h-12 rounded-full"/>
+                        <div id="open-popup-input" class="w-full bg-gray-800/50 border border-gray-700/60 rounded-full px-4 py-3 text-gray-400 cursor-pointer hover:bg-gray-700/50 transition">
+                            Phi hành gia, bạn đang nghĩ gì?
+                        </div>
+                    </div>
+                </div>
+                <!-- Posts sẽ được load từ API -->
+                <div id="posts-container" class="space-y-6">
+                    <div class="glass-pane p-8 rounded-2xl text-center text-gray-400">
+                        <p>Chưa có bài viết nào trong feed</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discovery Page Content -->
+            <div id="page-discovery" class="page-content space-y-6 hidden">
+                 <div class="glass-pane p-4 rounded-2xl flex items-center gap-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input type="text" placeholder="Tìm kiếm trong vũ trụ..." class="w-full bg-transparent text-white text-lg focus:outline-none"/>
+                </div>
+                <div class="glass-pane p-4 rounded-2xl">
+                    <h3 class="font-bold text-lg text-white mb-4">Thịnh hành</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <img src="https://images.unsplash.com/photo-1506703109124-385258545933?q=80&w=1974&auto=format&fit=crop" onerror="this.onerror=null;this.src='https://placehold.co/200x200/090a0f/FFFFFF?text=Image+not+found';" alt="Galaxy" class="rounded-lg w-full h-48 object-cover cursor-pointer hover:opacity-80 transition-opacity"/>
+                        <img src="https://images.unsplash.com/photo-1543722530-533b3723236f?q=80&w=1964&auto=format&fit=crop" onerror="this.onerror=null;this.src='https://placehold.co/200x200/090a0f/FFFFFF?text=Image+not+found';" alt="Nebula" class="rounded-lg w-full h-48 object-cover cursor-pointer hover:opacity-80 transition-opacity"/>
+                        <img src="https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop" onerror="this.onerror=null;this.src='https://placehold.co/200x200/090a0f/FFFFFF?text=Image+not+found';" alt="Stars" class="rounded-lg w-full h-48 object-cover cursor-pointer hover:opacity-80 transition-opacity"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maps Page Content -->
+            <div id="page-maps" class="page-content space-y-6 hidden">
+                <div class="glass-pane p-4 rounded-2xl flex items-center gap-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input type="text" placeholder="Tìm kiếm địa điểm, thành phố..." class="w-full bg-transparent text-white text-lg focus:outline-none"/>
+                </div>
+                <div class="glass-pane rounded-2xl overflow-hidden h-[calc(100vh-12rem)]">
+                    <div class="w-full h-full bg-cover bg-center opacity-50" style="background-image: url('https://placehold.co/1200x800/090a0f/00BFFF?text=Cosmic+Map+Interface')">
+                    </div>
+                </div>
+            </div>
+             <!-- Placeholder for other pages -->
+            <div id="page-messages" class="page-content hidden"><div class="glass-pane p-8 rounded-2xl text-center"><h2 class="text-2xl font-bold">Tin nhắn sắp ra mắt!</h2></div></div>
+            <div id="page-settings" class="page-content hidden"><div class="glass-pane p-8 rounded-2xl text-center"><h2 class="text-2xl font-bold">Cài đặt sắp ra mắt!</h2></div></div>
+            <!-- Profile Page Content -->
+            <div id="page-profile" class="page-content hidden">
+                <!-- Profile Header -->
+                <div class="glass-pane p-6 rounded-2xl">
+                    <div class="flex items-center gap-6">
+                        <img id="profile-avatar" src="https://placehold.co/96x96/4F46E5/FFFFFF?text=U" alt="User Avatar" class="w-24 h-24 rounded-full"/>
+                        <div class="flex-1">
+                            <h1 id="profile-name" class="text-2xl font-bold text-white mb-2">Tên người dùng</h1>
+                            <p id="profile-email" class="text-gray-400 mb-3">@username</p>
+                            <div class="flex gap-6 text-sm text-gray-300">
+                                <div><span id="profile-posts-count" class="font-semibold">0</span> bài viết</div>
+                                <div><span id="profile-friends-count" class="font-semibold">0</span> bạn bè</div>
+                            </div>
+                        </div>
+                        <button class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-white font-semibold transition-colors">
+                            Chỉnh sửa hồ sơ
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Profile Navigation -->
+                <div class="glass-pane p-1 rounded-2xl">
+                    <div class="flex">
+                        <button id="profile-posts-tab" class="flex-1 py-3 px-4 text-center rounded-xl bg-indigo-600 text-white font-semibold transition-colors">
+                            Bài viết
+                        </button>
+                        <button id="profile-about-tab" class="flex-1 py-3 px-4 text-center rounded-xl text-gray-400 hover:text-white transition-colors">
+                            Giới thiệu
+                        </button>
+                        <button id="profile-friends-tab" class="flex-1 py-3 px-4 text-center rounded-xl text-gray-400 hover:text-white transition-colors">
+                            Bạn bè
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Profile Content -->
+                <div id="profile-posts-content" class="profile-tab-content">
+                    <div id="profile-posts-container" class="space-y-6">
+                        <div class="glass-pane p-8 rounded-2xl text-center text-gray-400">
+                            <p>Đang tải bài viết...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="profile-about-content" class="profile-tab-content hidden">
+                    <div class="glass-pane p-6 rounded-2xl">
+                        <h3 class="text-lg font-semibold text-white mb-4">Về tôi</h3>
+                        <p class="text-gray-300">Thông tin chi tiết sẽ được cập nhật sau...</p>
+                    </div>
+                </div>
+
+                <div id="profile-friends-content" class="profile-tab-content hidden">
+                    <div id="profile-friends-container" class="space-y-4">
+                        <div class="glass-pane p-8 rounded-2xl text-center text-gray-400">
+                            <p>Đang tải danh sách bạn bè...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Right Sidebar -->
+        <aside id="right-sidebar" class="col-span-12 lg:col-span-4 h-fit sticky top-8 space-y-6 right-sidebar">
+            <div class="glass-pane p-4 rounded-2xl">
+                <h3 class="font-bold text-lg text-white mb-4">Gợi ý cho bạn</h3>
+                <div class="space-y-4">
+                    <div class="text-center text-gray-400 py-4">
+                        <p>Chưa có gợi ý nào</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Third-party Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Custom Script -->
+    <script src="assets/js/home.js"></script>
+</body>
+</html>

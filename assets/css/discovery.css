@@ -1,0 +1,155 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background: #090a0f;
+    color: #E5E7EB; /* gray-200 */
+}
+#cosmic-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -10;
+}
+.glass-pane {
+    background: rgba(10, 10, 20, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 191, 255, 0.2);
+    animation: float 8s ease-in-out infinite;
+}
+main .glass-pane { animation-delay: -2s; }
+.right-sidebar .glass-pane { animation-delay: -4s; }
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0px); }
+}
+
+/* Filter buttons */
+.filter-btn {
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.filter-btn:not(.active):hover {
+    background-color: rgba(75, 85, 99, 0.7) !important;
+    color: white !important;
+}
+
+.filter-btn.active {
+    box-shadow: 0 0 15px rgba(79, 70, 229, 0.4);
+}
+
+/* Search results animations */
+.user-card {
+    transition: all 0.3s ease;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.user-card:hover {
+    border-color: rgba(79, 70, 229, 0.4);
+    box-shadow: 0 4px 20px rgba(79, 70, 229, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Highlight matches */
+mark {
+    background-color: rgba(251, 191, 36, 0.3) !important;
+    color: rgb(253, 224, 71) !important;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* Online status indicator */
+.user-card .relative::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    background-color: #10b981;
+    border: 2px solid #090a0f;
+    border-radius: 50%;
+}
+
+/* Search input focus state */
+#friend-search-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.5);
+}
+
+/* Loading animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Button hover effects */
+.add-friend-btn, .friend-btn, .message-btn {
+    transition: all 0.2s ease;
+}
+
+.add-friend-btn:hover {
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    transform: translateY(-1px);
+}
+
+.friend-btn:hover {
+    box-shadow: 0 4px 12px rgba(75, 85, 99, 0.4);
+}
+
+.message-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Notification styles */
+.notification {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.secondary-button {
+    background-color: rgba(0, 191, 255, 0.15);
+    border: 1px solid rgba(0, 191, 255, 0.3);
+    transition: all 0.3s ease;
+}
+.secondary-button:hover {
+    background-color: rgba(0, 191, 255, 0.3);
+}
+.logout-button {
+    background-color: rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    transition: all 0.3s ease;
+}
+.logout-button:hover {
+    background-color: rgba(220, 38, 38, 0.4);
+    color: #fecaca;
+}
+body::-webkit-scrollbar { width: 8px; }
+body::-webkit-scrollbar-track { background: #090a0f; }
+body::-webkit-scrollbar-thumb {
+    background: rgba(0, 191, 255, 0.3);
+    border-radius: 4px;
+}
+body::-webkit-scrollbar-thumb:hover { background: rgba(0, 191, 255, 0.5); }
+
+.hidden {
+    display: none;
+}
