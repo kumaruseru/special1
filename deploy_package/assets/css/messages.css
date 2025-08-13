@@ -1,0 +1,238 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background: #090a0f;
+    color: #E5E7EB; /* gray-200 */
+    overflow: hidden; /* Completely hide all scrollbars */
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+}
+
+html {
+    overflow: hidden; /* Completely hide all scrollbars */
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+}
+
+/* Force hide ALL scrollbars and prevent any overflow */
+* {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    overflow-x: hidden !important;
+}
+
+*::-webkit-scrollbar {
+    display: none !important;
+    width: 0px !important;
+    height: 0px !important;
+    background: transparent !important;
+}
+
+/* Override any Tailwind or other scrollbar styles */
+.overflow-auto, .overflow-y-auto, .overflow-x-auto {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.overflow-auto::-webkit-scrollbar, 
+.overflow-y-auto::-webkit-scrollbar, 
+.overflow-x-auto::-webkit-scrollbar {
+    display: none !important;
+}
+
+/* Ensure no element causes horizontal overflow */
+.container, .glass-pane, main, div {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+#cosmic-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -10;
+}
+.glass-pane {
+    background: rgba(10, 10, 20, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 191, 255, 0.2);
+    animation: float 8s ease-in-out infinite;
+}
+main .glass-pane {
+     animation-delay: -2s;
+}
+.main-button {
+    background: linear-gradient(45deg, #4F46E5, #00BFFF);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 191, 255, 0.2);
+}
+.main-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+}
+.logout-button {
+    background-color: rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    transition: all 0.3s ease;
+}
+.logout-button:hover {
+    background-color: rgba(220, 38, 38, 0.4);
+    color: #fecaca;
+}
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0px); }
+}
+/* Custom Scrollbars */
+.custom-scroll::-webkit-scrollbar { width: 6px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0, 191, 255, 0.3);
+    border-radius: 3px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 191, 255, 0.5); }
+
+.hidden {
+    display: none;
+}
+
+/* Real-time Messaging Styles */
+.messages-container {
+    max-height: 500px;
+    scroll-behavior: smooth;
+}
+
+.message {
+    animation: messageSlideIn 0.3s ease-out;
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-own {
+    /* Styles for user's own messages */
+}
+
+.message-other {
+    /* Styles for other users' messages */
+}
+
+/* Typing Indicator */
+.typing-indicator {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.typing-dots div:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.typing-dots div:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.typing-dots div:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+/* Message Status */
+.message-status {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+/* Connection Status Indicator */
+#connection-status {
+    font-weight: 500;
+}
+
+/* Call Status Indicator */
+#call-status-indicator {
+    animation: slideInFromTop 0.3s ease-out;
+}
+
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Message Input Focus */
+.message-input:focus {
+    outline: none;
+}
+
+/* Send Button Active State */
+.send-button:active {
+    transform: scale(0.95);
+}
+
+/* Voice Call Overlay Styles */
+.voice-bar {
+    width: 4px;
+    height: 4px;
+    border-radius: 2px;
+    margin: 0 2px;
+    transition: height 0.1s ease;
+}
+
+/* Smooth transitions for UI elements */
+.nav-link, button {
+    transition: all 0.2s ease;
+}
+
+/* Custom scroll for navigation sidebar only */
+.nav-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(75, 85, 99, 0.5) transparent;
+    -ms-overflow-style: auto;
+    overflow-y: auto !important;
+}
+
+.nav-scroll::-webkit-scrollbar {
+    display: block !important;
+    width: 6px !important;
+    background: transparent !important;
+}
+
+.nav-scroll::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+.nav-scroll::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.5) !important;
+    border-radius: 3px !important;
+}
+
+.nav-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(75, 85, 99, 0.7) !important;
+}

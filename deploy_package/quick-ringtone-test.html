@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Ringtone Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+    <div class="text-center">
+        <h1 class="text-4xl font-bold mb-8">🔊 Quick Ringtone Test</h1>
+        
+        <div class="space-y-4 mb-8">
+            <button id="playBtn" onclick="playRingtone()" 
+                    class="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg text-xl font-semibold">
+                📞 Play Ringtone
+            </button>
+            
+            <button id="stopBtn" onclick="stopRingtone()" 
+                    class="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-lg text-xl font-semibold">
+                ⏹️ Stop Ringtone
+            </button>
+        </div>
+        
+        <div id="status" class="text-lg">Click to test the ringtone</div>
+    </div>
+
+    <script>
+        let audioContext;
+        let currentRingtone = null;
+        
+        // Initialize audio when user interacts
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        function createPhoneRingtone() {
+            const sampleRate = audioContext.sampleRate;
+            const duration = 3; // 3 seconds
+            const bufferLength = sampleRate * duration;
+            const buffer = audioContext.createBuffer(1, bufferLength, sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferLength; i++) {
+                const time = i / sampleRate;
+                
+                // Create classic phone ring pattern
+                const ringCycle = time % 4; // 4 second cycle
+                let amplitude = 0;
+                
+                if (ringCycle < 0.5 || (ringCycle > 1 && ringCycle < 1.5)) {
+                    // Two short rings
+                    const freq1 = 800; // First tone
+                    const freq2 = 1000; // Second tone (slightly higher)
+                    
+                    const tone1 = Math.sin(2 * Math.PI * freq1 * time);
+                    const tone2 = Math.sin(2 * Math.PI * freq2 * time);
+                    
+                    // Mix the tones and add vibrato
+                    const vibrato = 1 + 0.1 * Math.sin(2 * Math.PI * 6 * time);
+                    amplitude = (tone1 + tone2) * 0.3 * vibrato;
+                    
+                    // Add envelope for ring pattern
+                    const envelope = Math.sin(2 * Math.PI * 8 * time);
+                    amplitude *= Math.abs(envelope);
+                }
+                
+                data[i] = amplitude;
+            }
+            
+            return buffer;
+        }
+        
+        function playRingtone() {
+            initAudio();
+            
+            try {
+                // Stop any current ringtone
+                if (currentRingtone) {
+                    currentRingtone.stop();
+                }
+                
+                // Create and play new ringtone
+                const buffer = createPhoneRingtone();
+                currentRingtone = audioContext.createBufferSource();
+                currentRingtone.buffer = buffer;
+                currentRingtone.loop = true;
+                currentRingtone.connect(audioContext.destination);
+                
+                currentRingtone.start();
+                
+                document.getElementById('status').textContent = '🔊 Playing classic phone ringtone...';
+                console.log('✅ Ringtone playing!');
+                
+            } catch (error) {
+                console.error('Error playing ringtone:', error);
+                document.getElementById('status').textContent = '❌ Error: ' + error.message;
+            }
+        }
+        
+        function stopRingtone() {
+            if (currentRingtone) {
+                try {
+                    currentRingtone.stop();
+                    currentRingtone = null;
+                    document.getElementById('status').textContent = '🔇 Ringtone stopped';
+                    console.log('✅ Ringtone stopped');
+                } catch (error) {
+                    console.error('Error stopping ringtone:', error);
+                }
+            } else {
+                document.getElementById('status').textContent = '⚠️ No ringtone playing';
+            }
+        }
+        
+        // Enable buttons after user interaction
+        document.addEventListener('click', initAudio, { once: true });
+    </script>
+</body>
+</html>

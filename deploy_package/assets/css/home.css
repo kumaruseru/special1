@@ -1,0 +1,261 @@
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #090a0f;
+    color: #E5E7EB;
+    overflow-x: hidden; /* Only hide horizontal scroll */
+    overflow-y: auto; /* Allow vertical scroll */
+    min-height: 100vh; /* Ensure body can grow */
+}
+
+#cosmic-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -10;
+}
+
+.glass-pane {
+    background: rgba(10, 10, 20, 0.5);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 191, 255, 0.2);
+}
+
+.call-button {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.call-button:hover {
+    transform: scale(1.1);
+}
+
+.accept-button { background-color: #22c55e; }
+.decline-button { background-color: #ef4444; }
+.control-button { background-color: rgba(255, 255, 255, 0.1); }
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+    50% { box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
+}
+
+.pulsing-avatar {
+    animation: pulse 2s infinite;
+}
+
+/* Popup Styles */
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.popup-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.popup-content {
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    margin: 20px;
+    transform: scale(1);
+    transition: transform 0.3s ease;
+}
+
+.popup-overlay.hidden .popup-content {
+    transform: scale(0.9);
+}
+
+.popup-textarea {
+    background: rgba(17, 24, 39, 0.5);
+    border: 1px solid rgba(107, 114, 128, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    color: #E5E7EB;
+    font-size: 16px;
+    line-height: 1.5;
+    resize: none;
+    min-height: 120px;
+    max-height: 300px;
+    overflow-y: auto;
+    transition: border-color 0.3s ease, height 0.2s ease;
+}
+
+.popup-textarea:focus {
+    outline: none;
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.popup-textarea::placeholder {
+    color: rgba(156, 163, 175, 0.8);
+}
+
+.main-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.main-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.main-button:disabled {
+    background: rgba(107, 114, 128, 0.3);
+    color: rgba(156, 163, 175, 0.5);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Image Preview Styles */
+.image-preview-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.image-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-preview-item .remove-image {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.image-preview-item .remove-image:hover {
+    background: rgba(220, 38, 38, 0.8);
+}
+
+/* Tagged Friends Styles */
+.friend-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 14px;
+    color: #e5e7eb;
+}
+
+.friend-tag .remove-tag {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    margin-left: 4px;
+}
+
+.friend-tag .remove-tag:hover {
+    color: #dc2626;
+}
+
+/* Friend Item in Modal */
+.friend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.friend-item:hover {
+    background: rgba(75, 85, 99, 0.3);
+}
+
+.friend-item.selected {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.friend-item img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Location Suggestion Styles */
+.location-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: 1px solid transparent;
+}
+
+.location-item:hover {
+    background: rgba(75, 85, 99, 0.3);
+    border-color: rgba(107, 114, 128, 0.3);
+}
+
+.location-item .location-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(248, 113, 113, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal specific styles */
+.popup-overlay .glass-pane {
+    max-height: 80vh;
+    overflow-y: auto;
+}

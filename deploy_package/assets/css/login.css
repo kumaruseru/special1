@@ -1,0 +1,77 @@
+/* Basic body and background styling */
+body { 
+    font-family: 'Inter', sans-serif; 
+    margin: 0; 
+    padding: 0; 
+    overflow: hidden; 
+    background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%); 
+}
+/* Canvas for the Three.js background */
+#bg-canvas { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    z-index: -1; 
+}
+/* Main container wrapper - điều chỉnh vị trí form */
+.relative.w-full.h-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    transform: translateY(40px); /* Kéo form xuống 40px */
+}
+/* Main container for the login form */
+.form-container { 
+    background: rgba(10, 10, 20, 0.6); 
+    backdrop-filter: blur(12px); 
+    -webkit-backdrop-filter: blur(12px); 
+    border: 1px solid rgba(0, 191, 255, 0.3); 
+    position: relative;
+    z-index: 10;
+    transform: translateY(0px); /* Giữ form ở vị trí trung tâm */
+}
+/* Styling for form input fields */
+.form-input { 
+    background-color: rgba(255, 255, 255, 0.07); 
+    border: 1px solid rgba(0, 191, 255, 0.3); 
+    transition: all 0.3s ease; 
+    color: white; 
+    box-shadow: inset 0 0 8px rgba(0, 191, 255, 0.15); 
+}
+/* Focus state for form input fields */
+.form-input:focus { 
+    background-color: rgba(255, 255, 255, 0.1); 
+    border-color: #00BFFF; 
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.5), inset 0 0 8px rgba(0, 191, 255, 0.2); 
+    outline: none; 
+}
+/* Main action button styling */
+.form-button { 
+    background: linear-gradient(45deg, #4F46E5, #00BFFF); 
+    color: white; 
+    transition: all 0.3s ease; 
+    box-shadow: 0 4px 15px rgba(0, 191, 255, 0.2); 
+}
+/* Hover effect for the main button */
+.form-button:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4); 
+}
+/* Link styling */
+.form-link { color: #60A5FA; }
+.form-link:hover { color: #93C5FD; }
+/* Social login button base style */
+.social-button {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+/* Hover effect for social buttons */
+.social-button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+.google-button { background-color: #DB4437; }
+.facebook-button { background-color: #4267B2; }
