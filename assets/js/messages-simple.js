@@ -32,6 +32,15 @@ class MessagesManager {
         this.activeConversation = null;
         this.apiBaseUrl = 'http://localhost:8080/api';
         
+        // Audio system for call sounds
+        this.audioSystem = {
+            ringtone: null,
+            callConnected: null,
+            callEnded: null,
+            notification: null
+        };
+        this.useInPageCall = true; // Use in-page call overlay by default
+        
         // Initialize with a small delay to ensure DOM is ready
         setTimeout(async () => {
             try {
@@ -62,6 +71,9 @@ class MessagesManager {
                 
                 // Always setup event listeners
                 this.setupEventListeners();
+                
+                // Initialize audio system
+                this.initializeAudioSystem();
             } catch (error) {
                 console.error('❌ Initialization error:', error);
             }
@@ -562,10 +574,53 @@ class MessagesManager {
         // Enable input
         this.enableMessageInput(user);
         
+        // Setup call buttons
+        this.setupCallButtons();
+        
         // Set up auto-refresh for receiving new messages
         this.setupMessageAutoRefresh(user);
         
         console.log('=== CONVERSATION STARTED SUCCESSFULLY ===');
+    }
+
+    setupCallButtons() {
+        console.log('=== SETTING UP CALL BUTTONS ===');
+        
+        // Voice call button
+        const voiceCallButtons = document.querySelectorAll('button[title="Gọi thoại"]');
+        voiceCallButtons.forEach(button => {
+            // Remove existing listeners
+            button.replaceWith(button.cloneNode(true));
+        });
+        
+        // Video call button  
+        const videoCallButtons = document.querySelectorAll('button[title="Gọi video"]');
+        videoCallButtons.forEach(button => {
+            // Remove existing listeners
+            button.replaceWith(button.cloneNode(true));
+        });
+
+        // Re-add listeners to fresh buttons
+        const freshVoiceButtons = document.querySelectorAll('button[title="Gọi thoại"]');
+        freshVoiceButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.initiateVoiceCall();
+            });
+        });
+
+        const freshVideoButtons = document.querySelectorAll('button[title="Gọi video"]');
+        freshVideoButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.initiateVideoCall();
+            });
+        });
+
+        console.log('Call buttons setup completed:', {
+            voiceButtons: freshVoiceButtons.length,
+            videoButtons: freshVideoButtons.length
+        });
     }
 
     setupMessageAutoRefresh(user) {
@@ -816,6 +871,629 @@ class MessagesManager {
                 }
             });
         }
+
+        // Voice call button
+        const voiceCallButtons = document.querySelectorAll('button[title="Gọi thoại"]');
+        voiceCallButtons.forEach(button => {
+            button.addEventListener('click', () => this.initiateVoiceCall());
+        });
+
+        // Video call button  
+        const videoCallButtons = document.querySelectorAll('button[title="Gọi video"]');
+        videoCallButtons.forEach(button => {
+            button.addEventListener('click', () => this.initiateVideoCall());
+        });
+    }
+
+    // Call functionality
+    initiateVoiceCall() {
+        console.log('=== INITIATING VOICE CALL ===');
+        
+        if (!this.activeConversation?.user) {
+            console.warn('No active conversation to call');
+            this.showNotification('Hãy chọn một cuộc trò chuyện trước khi gọi', 'warning');
+            return;
+        }
+
+        this.openCallWindow('voice');
+    }
+
+    initiateVideoCall() {
+        console.log('=== INITIATING VIDEO CALL ===');
+        
+        if (!this.activeConversation?.user) {
+            console.warn('No active conversation to call');
+            this.showNotification('Hãy chọn một cuộc trò chuyện trước khi gọi', 'warning');
+            return;
+        }
+
+        this.openCallWindow('video');
+    }
+
+    initializeAudioSystem() {
+        console.log('=== INITIALIZING AUDIO SYSTEM ===');
+        
+        try {
+            // Initialize AudioGenerator for real sounds
+            this.audioSystem.generator = new AudioGenerator();
+            this.audioSystem.currentRingtone = null;
+            this.audioSystem.volume = 0.7;
+            
+            console.log('✅ Audio system initialized with real sound generation');
+        } catch (error) {
+            console.error('❌ Failed to initialize audio system:', error);
+            // Fallback to basic audio
+            this.initializeBasicAudio();
+        }
+    }
+    
+    initializeBasicAudio() {
+        // Fallback initialization with basic Audio objects
+        this.audioSystem.ringtone = new Audio();
+        this.audioSystem.ringtone.loop = true;
+        this.audioSystem.ringtone.volume = 0.7;
+        
+        this.audioSystem.callConnected = new Audio();
+        this.audioSystem.callConnected.volume = 0.5;
+        
+        this.audioSystem.callEnded = new Audio();
+        this.audioSystem.callEnded.volume = 0.5;
+        
+        this.audioSystem.notification = new Audio();
+        this.audioSystem.notification.volume = 0.6;
+        
+        this.setAudioSources();
+    }
+    
+    setAudioSources() {
+        // Set ringtone (classic phone ring)
+        this.audioSystem.ringtone.src = 'data:audio/wav;base64,UklGRvIBAABXQVZFZm10IAAAAAABAAABBAC4AQABBQAAAAVAEAAAE=' + 
+            'EFVlhEhVaVVhVWlVYVVpVWFVaVVhVWlVYVVpVWFVaVVhVWlVYVVpVWFVaVVhVWlVYVVpVWFVaVVhVWlVYVVpVWFVaVVhVWlVYVVpVWFVaVVhVWlVYVVpVWFVaVVhVWlVYVVpVWFVaVVhVWlVYVVpVWFVaVVhVWlV';
+        
+        // Set call connected sound (short beep)
+        this.audioSystem.callConnected.src = 'data:audio/wav;base64,UklGRsABAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
+        
+        // Set call ended sound (disconnect tone)
+        this.audioSystem.callEnded.src = 'data:audio/wav;base64,UklGRsACAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
+        
+        // Set notification sound (message notification)
+        this.audioSystem.notification.src = 'data:audio/wav;base64,UklGRsABAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
+        
+        // Fallback: Try to use system notification sound
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            // Create system sounds using Web Audio API
+            this.createSystemSounds();
+        }
+    }
+    
+    createSystemSounds() {
+        try {
+            // Create Audio Context for generating sounds
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                const audioCtx = new AudioContext();
+                
+                // Generate ringtone sound
+                this.generateRingtone(audioCtx);
+            }
+        } catch (error) {
+            console.log('Web Audio API not available, using fallback sounds');
+        }
+    }
+    
+    generateRingtone(audioCtx) {
+        // Create a simple ringtone using oscillators
+        const duration = 2; // 2 seconds
+        const sampleRate = audioCtx.sampleRate;
+        const frameCount = sampleRate * duration;
+        const arrayBuffer = audioCtx.createBuffer(1, frameCount, sampleRate);
+        const channelData = arrayBuffer.getChannelData(0);
+        
+        // Generate classic phone ring pattern
+        for (let i = 0; i < frameCount; i++) {
+            const t = i / sampleRate;
+            const freq1 = 440; // A4 note
+            const freq2 = 880; // A5 note
+            
+            // Create ring pattern (alternating tones)
+            const pattern = Math.floor(t * 2) % 2;
+            const freq = pattern === 0 ? freq1 : freq2;
+            
+            // Generate sine wave with envelope
+            const envelope = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+            channelData[i] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.3;
+        }
+        
+        // Convert buffer to blob and create audio URL
+        this.bufferToAudioUrl(arrayBuffer).then(url => {
+            if (url) {
+                this.audioSystem.ringtone.src = url;
+            }
+        });
+    }
+    
+    async bufferToAudioUrl(buffer) {
+        try {
+            // This is a simplified version - in real implementation,
+            // you'd need to properly encode the audio buffer
+            return null;
+        } catch (error) {
+            console.error('Failed to create audio URL:', error);
+            return null;
+        }
+    }
+    
+    playRingtone() {
+        console.log('🔊 Playing ringtone...');
+        try {
+            if (this.audioSystem.generator) {
+                // Use real sound generation
+                this.audioSystem.currentRingtone = this.audioSystem.generator.playSound('ringtone', true, this.audioSystem.volume);
+                console.log('✅ Real ringtone started');
+            } else if (this.audioSystem.ringtone) {
+                // Fallback to Audio object
+                this.audioSystem.ringtone.currentTime = 0;
+                const playPromise = this.audioSystem.ringtone.play();
+                if (playPromise) {
+                    playPromise.catch(error => {
+                        console.warn('Ringtone play failed:', error);
+                        this.playSystemBeep();
+                    });
+                }
+            } else {
+                this.playSystemBeep();
+            }
+        } catch (error) {
+            console.warn('Ringtone play error:', error);
+            this.playSystemBeep();
+        }
+    }
+    
+    stopRingtone() {
+        console.log('🔇 Stopping ringtone...');
+        try {
+            if (this.audioSystem.currentRingtone) {
+                // Stop generated sound
+                this.audioSystem.generator.stopSound(this.audioSystem.currentRingtone);
+                this.audioSystem.currentRingtone = null;
+                console.log('✅ Real ringtone stopped');
+            } else if (this.audioSystem.ringtone) {
+                // Stop fallback audio
+                this.audioSystem.ringtone.pause();
+                this.audioSystem.ringtone.currentTime = 0;
+                console.log('✅ Fallback ringtone stopped');
+            }
+        } catch (error) {
+            console.warn('Failed to stop ringtone:', error);
+        }
+    }
+    
+    playCallConnected() {
+        console.log('📞 Playing call connected sound...');
+        try {
+            if (this.audioSystem.generator) {
+                this.audioSystem.generator.playSound('callConnected', false, this.audioSystem.volume);
+            } else if (this.audioSystem.callConnected) {
+                this.audioSystem.callConnected.currentTime = 0;
+                this.audioSystem.callConnected.play().catch(() => {
+                    this.playSystemBeep();
+                });
+            } else {
+                this.playSystemBeep();
+            }
+        } catch (error) {
+            this.playSystemBeep();
+        }
+    }
+    
+    playCallEnded() {
+        console.log('📵 Playing call ended sound...');
+        try {
+            if (this.audioSystem.generator) {
+                this.audioSystem.generator.playSound('callEnded', false, this.audioSystem.volume);
+            } else if (this.audioSystem.callEnded) {
+                this.audioSystem.callEnded.currentTime = 0;
+                this.audioSystem.callEnded.play().catch(() => {
+                    this.playSystemBeep();
+                });
+            } else {
+                this.playSystemBeep();
+            }
+        } catch (error) {
+            this.playSystemBeep();
+        }
+    }
+    
+    playNotification() {
+        console.log('🔔 Playing notification sound...');
+        try {
+            if (this.audioSystem.generator) {
+                this.audioSystem.generator.playSound('notification', false, this.audioSystem.volume);
+            } else if (this.audioSystem.notification) {
+                this.audioSystem.notification.currentTime = 0;
+                this.audioSystem.notification.play().catch(() => {
+                    this.playSystemBeep();
+                });
+            } else {
+                this.playSystemBeep();
+            }
+        } catch (error) {
+            this.playSystemBeep();
+        }
+    }
+    
+    playSystemBeep() {
+        // Fallback: Use system beep or create a simple beep sound
+        try {
+            // Create a simple beep using Web Audio API
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        } catch (error) {
+            // Ultimate fallback: Console beep
+            console.log('🔊 BEEP!');
+        }
+    }
+
+    openCallWindow(callType) {
+        console.log(`=== OPENING ${callType.toUpperCase()} CALL WINDOW ===`);
+        
+        const user = this.activeConversation.user;
+        const callData = {
+            type: callType,
+            contact: user.name || user.username || 'Unknown Contact',
+            contactId: user.id,
+            state: 'outgoing',
+            callId: Date.now().toString(),
+            startTime: new Date().toISOString()
+        };
+
+        // Store call data for the call window
+        localStorage.setItem('currentCall', JSON.stringify(callData));
+        
+        // Play ringtone for outgoing call
+        this.playRingtone();
+        
+        // Stop ringtone after 30 seconds if call not answered
+        setTimeout(() => {
+            this.stopRingtone();
+        }, 30000);
+        
+        // Calculate window position (center of screen)
+        const screenWidth = window.screen.width;
+        const screenHeight = window.screen.height;
+        const windowWidth = 800;
+        const windowHeight = 600;
+        const left = Math.round((screenWidth - windowWidth) / 2);
+        const top = Math.round((screenHeight - windowHeight) / 2);
+
+        // Window features
+        const windowFeatures = [
+            `width=${windowWidth}`,
+            `height=${windowHeight}`,
+            `left=${left}`,
+            `top=${top}`,
+            'resizable=yes',
+            'scrollbars=no',
+            'status=no',
+            'menubar=no',
+            'toolbar=no',
+            'location=no'
+        ].join(',');
+
+        // Open call window
+        const callWindow = window.open(
+            '../pages/calls.html',
+            `call_${callData.callId}`,
+            windowFeatures
+        );
+
+        if (callWindow) {
+            console.log('Call window opened successfully');
+            this.showNotification(`Đang khởi tạo cuộc gọi ${callType} với ${user.name}...`, 'info');
+            
+            // Monitor call window for close event
+            const checkClosed = setInterval(() => {
+                if (callWindow.closed) {
+                    console.log('Call window closed');
+                    this.stopRingtone();
+                    this.playCallEnded();
+                    localStorage.removeItem('currentCall');
+                    clearInterval(checkClosed);
+                }
+            }, 1000);
+            
+            // Focus the new window
+            callWindow.focus();
+        } else {
+            console.error('Failed to open call window - popup blocked?');
+            this.stopRingtone();
+            this.showNotification('Không thể mở cửa sổ cuộc gọi. Vui lòng cho phép popup!', 'error');
+        }
+    }
+
+    startCall(callType) {
+        const user = this.activeConversation.user;
+        const callData = {
+            type: callType,
+            contact: user.name || user.username || 'Unknown Contact',
+            contactId: user.id,
+            state: 'outgoing',
+            callId: Date.now().toString(),
+            startTime: new Date().toISOString()
+        };
+
+        // Store call data for the call window
+        localStorage.setItem('currentCall', JSON.stringify(callData));
+        
+        console.log(`Starting ${callType} call with:`, user.name);
+        
+        // Option 1: Use in-page overlay (recommended)
+        if (this.useInPageCall) {
+            this.showInPageCall(callType, callData);
+        } else {
+            // Option 2: Open call window (original method)
+            const callWindow = window.open(
+                '../pages/calls.html',
+                `call_${callData.callId}`,
+                `width=800,height=600,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+            );
+
+            if (callWindow) {
+                // Store reference for communication
+                this.activeCallWindow = callWindow;
+                
+                // Show in-app notification
+                this.showNotification(`Đang gọi ${callType === 'video' ? 'video' : 'thoại'} cho ${user.name}...`, 'info');
+                
+                // Monitor call window
+                const checkClosed = setInterval(() => {
+                    if (callWindow.closed) {
+                        clearInterval(checkClosed);
+                        this.activeCallWindow = null;
+                        localStorage.removeItem('currentCall');
+                        console.log('Call window closed');
+                    }
+                }, 1000);
+            } else {
+                console.error('Failed to open call window');
+                this.showNotification('Không thể mở cửa sổ cuộc gọi. Vui lòng kiểm tra popup blocker.', 'error');
+            }
+        }
+    }
+
+    showInPageCall(callType, callData) {
+        const overlayId = callType === 'video' ? 'video-call-overlay' : 'voice-call-overlay';
+        const overlay = document.getElementById(overlayId);
+        
+        if (!overlay) {
+            console.error(`Call overlay not found: ${overlayId}`);
+            return;
+        }
+
+        // Update call status
+        const statusElement = overlay.querySelector('#call-status, #video-call-status');
+        if (statusElement) {
+            statusElement.textContent = `Đang gọi ${callData.contact}...`;
+        }
+
+        // Show overlay
+        overlay.classList.remove('hidden');
+        
+        // Setup call controls
+        this.setupCallControls(overlay, callType, callData);
+        
+        // Start call timer (simulate connection after 3 seconds)
+        setTimeout(() => {
+            this.simulateCallConnection(overlay, callData);
+        }, 3000);
+    }
+
+    setupCallControls(overlay, callType, callData) {
+        // End call button
+        const endButtons = overlay.querySelectorAll('#end-call-btn, #video-end-call-btn');
+        endButtons.forEach(button => {
+            button.onclick = () => this.endInPageCall(overlay);
+        });
+
+        // Mute button
+        const muteButtons = overlay.querySelectorAll('#mute-btn, #video-mute-btn');
+        muteButtons.forEach(button => {
+            button.onclick = () => this.toggleMute(button);
+        });
+
+        // Video-specific controls
+        if (callType === 'video') {
+            const cameraButton = overlay.querySelector('#camera-toggle-btn');
+            if (cameraButton) {
+                cameraButton.onclick = () => this.toggleCamera(cameraButton);
+            }
+
+            const screenShareButton = overlay.querySelector('#screen-share-btn');
+            if (screenShareButton) {
+                screenShareButton.onclick = () => this.toggleScreenShare(screenShareButton);
+            }
+        }
+
+        // Speaker button (voice call)
+        const speakerButton = overlay.querySelector('#speaker-btn');
+        if (speakerButton) {
+            speakerButton.onclick = () => this.toggleSpeaker(speakerButton);
+        }
+    }
+
+    simulateCallConnection(overlay, callData) {
+        const statusElements = overlay.querySelectorAll('#call-status, #video-call-status');
+        const timerElements = overlay.querySelectorAll('#call-timer, #video-call-timer');
+        
+        statusElements.forEach(element => {
+            element.textContent = 'Đã kết nối';
+            element.className = 'text-green-400';
+        });
+
+        timerElements.forEach(element => {
+            element.classList.remove('hidden');
+            this.startCallTimer(element);
+        });
+    }
+
+    startCallTimer(timerElement) {
+        let seconds = 0;
+        this.callTimer = setInterval(() => {
+            seconds++;
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    endInPageCall(overlay) {
+        // Clear timer
+        if (this.callTimer) {
+            clearInterval(this.callTimer);
+            this.callTimer = null;
+        }
+
+        // Hide overlay
+        overlay.classList.add('hidden');
+        
+        // Clean up call data
+        localStorage.removeItem('currentCall');
+        
+        // Show notification
+        this.showNotification('Cuộc gọi đã kết thúc', 'info');
+    }
+
+    toggleMute(button) {
+        const isMuted = button.classList.contains('muted');
+        
+        if (isMuted) {
+            button.classList.remove('muted', 'bg-red-600');
+            button.classList.add('bg-gray-700/80');
+            button.title = 'Tắt tiếng';
+        } else {
+            button.classList.add('muted', 'bg-red-600');
+            button.classList.remove('bg-gray-700/80');
+            button.title = 'Bật tiếng';
+        }
+        
+        // In a real app, this would mute/unmute the actual audio
+        console.log('Toggle mute:', !isMuted);
+    }
+
+    toggleCamera(button) {
+        const isCameraOff = button.classList.contains('camera-off');
+        
+        if (isCameraOff) {
+            button.classList.remove('camera-off', 'bg-red-600');
+            button.classList.add('bg-gray-700/80');
+            button.title = 'Tắt camera';
+        } else {
+            button.classList.add('camera-off', 'bg-red-600');
+            button.classList.remove('bg-gray-700/80');
+            button.title = 'Bật camera';
+        }
+        
+        // In a real app, this would turn camera on/off
+        console.log('Toggle camera:', !isCameraOff);
+    }
+
+    toggleScreenShare(button) {
+        const isSharing = button.classList.contains('sharing');
+        
+        if (isSharing) {
+            button.classList.remove('sharing', 'bg-blue-600');
+            button.classList.add('bg-gray-700/80');
+            button.title = 'Chia sẻ màn hình';
+        } else {
+            button.classList.add('sharing', 'bg-blue-600');
+            button.classList.remove('bg-gray-700/80');
+            button.title = 'Dừng chia sẻ';
+        }
+        
+        // In a real app, this would start/stop screen sharing
+        console.log('Toggle screen share:', !isSharing);
+    }
+
+    toggleSpeaker(button) {
+        const isSpeakerOn = button.classList.contains('speaker-on');
+        
+        if (isSpeakerOn) {
+            button.classList.remove('speaker-on', 'bg-blue-600');
+            button.classList.add('bg-gray-700/80');
+            button.title = 'Loa ngoài';
+        } else {
+            button.classList.add('speaker-on', 'bg-blue-600');
+            button.classList.remove('bg-gray-700/80');
+            button.title = 'Loa trong';
+        }
+        
+        console.log('Toggle speaker:', !isSpeakerOn);
+    }
+
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+        
+        // Style based on type
+        switch(type) {
+            case 'success':
+                notification.className += ' bg-green-600 text-white';
+                break;
+            case 'warning':
+                notification.className += ' bg-yellow-600 text-white';
+                break;
+            case 'error':
+                notification.className += ' bg-red-600 text-white';
+                break;
+            default:
+                notification.className += ' bg-blue-600 text-white';
+        }
+
+        notification.innerHTML = `
+            <div class="flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M12 8h.01"/>
+                </svg>
+                <span>${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-auto text-white/70 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Animate in
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 5000);
     }
 
     async sendMessage() {
@@ -1039,6 +1717,12 @@ class MessagesManager {
         }
 
         const isMe = message.sender === 'me';
+        
+        // Play notification sound for incoming messages
+        if (!isMe) {
+            this.playNotification();
+        }
+        
         const messageDiv = document.createElement('div');
         messageDiv.className = `flex items-start gap-3 ${isMe ? 'justify-end' : ''} message`;
         messageDiv.dataset.messageId = message.id || 'temp';

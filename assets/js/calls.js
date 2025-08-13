@@ -3,6 +3,7 @@ let localStream = null;
 let remoteStream = null;
 let peerConnection = null;
 let callInfo = null;
+let audioSystem = null;
 
 // WebRTC configuration
 const rtcConfig = {
@@ -10,6 +11,26 @@ const rtcConfig = {
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }
     ]
+};
+
+// Audio system for call window
+const initializeCallAudio = () => {
+    audioSystem = {
+        callConnected: new Audio(),
+        callEnded: new Audio(),
+        ringtone: new Audio()
+    };
+    
+    // Set volumes
+    audioSystem.callConnected.volume = 0.5;
+    audioSystem.callEnded.volume = 0.5;
+    audioSystem.ringtone.volume = 0.7;
+    audioSystem.ringtone.loop = true;
+    
+    // Simple beep sounds using data URLs
+    audioSystem.callConnected.src = 'data:audio/wav;base64,UklGRvIBAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
+    audioSystem.callEnded.src = 'data:audio/wav;base64,UklGRsACAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
+    audioSystem.ringtone.src = 'data:audio/wav;base64,UklGRsABAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
 };
 
 // Initialize call info from localStorage
@@ -28,6 +49,9 @@ const initializeCallInfo = () => {
     
     // Set page title based on call info
     document.title = `${callInfo.type === 'video' ? 'Video' : 'Voice'} Call - ${callInfo.contact}`;
+    
+    // Initialize audio system
+    initializeCallAudio();
 };
 
 // WebRTC Call Manager
@@ -590,3 +614,143 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== CALLS PAGE LOADED ===');
+    
+    // Initialize call info from localStorage
+    initializeCallInfo();
+    
+    // Update UI with call information
+    updateCallUI();
+    
+    // Initialize WebRTC manager
+    const webrtcManager = new WebRTCManager();
+    
+    // Setup event listeners for call controls
+    setupCallControls();
+    
+    console.log('Calls page initialization complete');
+});
+
+// Update UI with current call information
+function updateCallUI() {
+    if (!callInfo) return;
+    
+    console.log('Updating call UI with:', callInfo);
+    
+    // Update contact name
+    const contactElements = document.querySelectorAll('[data-contact-name]');
+    contactElements.forEach(el => {
+        el.textContent = callInfo.contact || 'Unknown Contact';
+    });
+    
+    // Update call type in title
+    const titleElements = document.querySelectorAll('[data-call-type]');
+    titleElements.forEach(el => {
+        el.textContent = callInfo.type === 'video' ? 'Video Call' : 'Voice Call';
+    });
+    
+    // Update call state
+    const stateElements = document.querySelectorAll('[data-call-state]');
+    stateElements.forEach(el => {
+        const states = {
+            'outgoing': 'Đang gọi...',
+            'incoming': 'Cuộc gọi đến',
+            'active': 'Đang kết nối...',
+            'connected': 'Đã kết nối'
+        };
+        el.textContent = states[callInfo.state] || 'Đang kết nối...';
+    });
+    
+    // Show/hide elements based on call type
+    if (callInfo.type === 'voice') {
+        // Hide video elements for voice calls
+        const videoElements = document.querySelectorAll('[data-video-only]');
+        videoElements.forEach(el => el.style.display = 'none');
+    }
+}
+
+// Setup event listeners for call controls
+function setupCallControls() {
+    // Mute button
+    const muteButtons = document.querySelectorAll('[data-action="mute"]');
+    muteButtons.forEach(button => {
+        button.addEventListener('click', () => toggleMute());
+    });
+    
+    // Camera toggle (video calls only)
+    const cameraButtons = document.querySelectorAll('[data-action="camera"]');
+    cameraButtons.forEach(button => {
+        button.addEventListener('click', () => toggleCamera());
+    });
+    
+    // End call button
+    const endCallButtons = document.querySelectorAll('[data-action="end-call"]');
+    endCallButtons.forEach(button => {
+        button.addEventListener('click', () => endCall());
+    });
+    
+    // Screen share button
+    const screenShareButtons = document.querySelectorAll('[data-action="screen-share"]');
+    screenShareButtons.forEach(button => {
+        button.addEventListener('click', () => toggleScreenShare());
+    });
+}
+
+// Call control functions
+function toggleMute() {
+    console.log('Toggle mute');
+    // Implementation for mute/unmute
+}
+
+function toggleCamera() {
+    console.log('Toggle camera');
+    // Implementation for camera on/off
+}
+
+function toggleScreenShare() {
+    console.log('Toggle screen share');
+    // Implementation for screen sharing
+}
+
+function endCall() {
+    console.log('=== ENDING CALL ===');
+    
+    // Play call ended sound
+    if (audioSystem && audioSystem.callEnded) {
+        try {
+            audioSystem.callEnded.play().catch(error => {
+                console.log('Could not play call ended sound:', error);
+            });
+        } catch (error) {
+            console.log('Audio system not available');
+        }
+    }
+    
+    // Clean up WebRTC connections
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    
+    // Stop local streams
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    
+    // Clear call data
+    localStorage.removeItem('currentCall');
+    
+    // Close the window after a short delay to allow sound to play
+    setTimeout(() => {
+        if (window.opener) {
+            window.close();
+        } else {
+            // If not a popup, redirect back
+            window.location.href = '../pages/messages.html';
+        }
+    }, 1000);
+}
