@@ -7,6 +7,15 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
 
+// Email functionality
+const { 
+    sendWelcomeEmail, 
+    sendPasswordResetEmail, 
+    sendVerificationEmail, 
+    sendNotificationEmail,
+    testEmailConnection 
+} = require('./config/email');
+
 // Multi-database clients
 const Redis = require('redis');
 const { Pool } = require('pg');
@@ -175,6 +184,22 @@ const userSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    resetPasswordToken: {
+        type: String,
+        default: undefined
+    },
+    resetPasswordExpiry: {
+        type: Date,
+        default: undefined
+    },
+    emailVerified: {
+        type: Boolean,
+        default: false
+    },
+    emailVerificationToken: {
+        type: String,
+        default: undefined
     }
 }, {
     timestamps: true
@@ -433,6 +458,16 @@ app.post('/api/register', async (req, res) => {
         await newUser.save();
         console.log('✅ User created successfully:', newUser._id);
 
+        // Send welcome email
+        const userName = `${newUser.firstName} ${newUser.lastName}`;
+        try {
+            await sendWelcomeEmail(newUser.email, userName);
+            console.log('📧 Welcome email sent to:', newUser.email);
+        } catch (emailError) {
+            console.error('📧 Failed to send welcome email:', emailError);
+            // Don't fail registration if email fails
+        }
+
         // Generate JWT token
         const token = jwt.sign(
             { 
@@ -582,6 +617,160 @@ app.post('/api/login', async (req, res) => {
             success: false,
             message: 'Lỗi server. Vui lòng thử lại sau!',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+// Forgot Password endpoint
+app.post('/api/forgot-password', async (req, res) => {
+    try {
+        console.log('🔐 Forgot password request received for:', req.body.email);
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập email!'
+            });
+        }
+
+        // Check if user exists
+        const user = await User.findOne({ email });
+        if (!user) {
+            // Don't reveal if user exists or not for security
+            return res.status(200).json({
+                success: true,
+                message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được email reset password.'
+            });
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        // Save reset token to user
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpiry = resetTokenExpiry;
+        await user.save();
+
+        // Send reset email
+        const userName = `${user.firstName} ${user.lastName}`;
+        try {
+            await sendPasswordResetEmail(user.email, resetToken, userName);
+            console.log('📧 Password reset email sent to:', user.email);
+        } catch (emailError) {
+            console.error('📧 Failed to send reset email:', emailError);
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể gửi email. Vui lòng thử lại!'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Email reset password đã được gửi!'
+        });
+
+    } catch (error) {
+        console.error('💥 Forgot password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server. Vui lòng thử lại sau!'
+        });
+    }
+});
+
+// Reset Password endpoint
+app.post('/api/reset-password', async (req, res) => {
+    try {
+        console.log('🔐 Reset password request received');
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token và mật khẩu mới là bắt buộc!'
+            });
+        }
+
+        // Find user with valid reset token
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpiry: { $gt: new Date() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token không hợp lệ hoặc đã hết hạn!'
+            });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        
+        // Update user password and clear reset token
+        user.password = hashedPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpiry = undefined;
+        await user.save();
+
+        console.log('✅ Password reset successful for:', user.email);
+        res.status(200).json({
+            success: true,
+            message: 'Mật khẩu đã được cập nhật thành công!'
+        });
+
+    } catch (error) {
+        console.error('💥 Reset password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server. Vui lòng thử lại sau!'
+        });
+    }
+});
+
+// Email test endpoint (for development)
+app.post('/api/test-email', async (req, res) => {
+    try {
+        const { type, email, name } = req.body;
+        
+        let result;
+        switch (type) {
+            case 'welcome':
+                result = await sendWelcomeEmail(email || 'test@example.com', name || 'Test User');
+                break;
+            case 'reset':
+                result = await sendPasswordResetEmail(email || 'test@example.com', 'test-token-123', name || 'Test User');
+                break;
+            case 'verify':
+                result = await sendVerificationEmail(email || 'test@example.com', 'verify-token-123', name || 'Test User');
+                break;
+            case 'notification':
+                result = await sendNotificationEmail(email || 'test@example.com', name || 'Test User', 'new_message', 'You have a new message from the cosmic network!');
+                break;
+            case 'connection':
+                result = await testEmailConnection();
+                break;
+            default:
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid email test type. Use: welcome, reset, verify, notification, or connection'
+                });
+        }
+        
+        res.json({
+            success: result.success,
+            message: result.success ? 'Email sent successfully!' : 'Failed to send email',
+            details: result
+        });
+        
+    } catch (error) {
+        console.error('Email test error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Email test failed',
+            error: error.message
         });
     }
 });
