@@ -151,11 +151,31 @@ async function loadSuggestedUsers() {
             userEmail: userEmail
         });
         
-        // If we have user data but no token, try API without auth first
+        // If we have user data but no token, try to refresh token first
         if (!token && (userName || userEmail)) {
-            console.log('🔄 No token but have user data - trying API without auth');
+            console.log('🔄 No token but have user data - trying to refresh token');
             
             try {
+                // Try to refresh token using shared.js function
+                if (window.tryRefreshToken) {
+                    console.log('🔑 Attempting token refresh...');
+                    const refreshSuccess = await window.tryRefreshToken();
+                    
+                    if (refreshSuccess) {
+                        // Get the new token after refresh
+                        const newToken = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
+                        console.log('✅ Token refresh successful, new token exists:', !!newToken);
+                        
+                        if (newToken) {
+                            // Retry API call with new token
+                            const success = await loadUsersWithToken(newToken);
+                            if (success) return;
+                        }
+                    }
+                }
+                
+                // If refresh failed, try API without auth as fallback
+                console.log('🔄 Token refresh failed, trying API without auth');
                 const response = await fetch('/api/users?limit=10&filter=' + currentFilter, {
                     method: 'GET',
                     headers: {
@@ -170,16 +190,16 @@ async function loadSuggestedUsers() {
                     if (data.success && data.users) {
                         currentUsers = data.users || [];
                         displaySearchResults(currentUsers, null, data.message || 'Gợi ý cho bạn');
-                        return; // Success, no need for mock users
+                        return;
                     }
                 }
             } catch (error) {
-                console.log('API without auth failed:', error.message);
+                console.log('API calls failed:', error.message);
             }
             
-            // Show error message instead of mock data
-            console.log('❌ API failed, showing error');
-            showSearchError('Không thể tải danh sách người dùng. Vui lòng đăng nhập.');
+            // Show login required if all attempts failed
+            console.log('❌ All attempts failed, showing login required');
+            showLoginRequired();
             return;
         }
         
@@ -233,6 +253,36 @@ async function loadSuggestedUsers() {
         `;
     } finally {
         isLoading = false;
+    }
+}
+
+// Helper function to load users with token
+async function loadUsersWithToken(token) {
+    try {
+        console.log('📡 Loading users with token...');
+        const response = await fetch('/api/users?limit=10&filter=' + currentFilter, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📊 API Response with token:', data);
+            
+            if (data.success) {
+                currentUsers = data.users || [];
+                displaySearchResults(currentUsers, null, 'Gợi ý cho bạn');
+                return true;
+            }
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error loading users with token:', error);
+        return false;
     }
 }
 
@@ -747,7 +797,23 @@ async function loadSidebarSuggestions() {
     if (!sidebarSuggestions) return;
 
     try {
-        const token = localStorage.getItem('authToken');
+        // Check all possible token names
+        let token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
+        const userName = localStorage.getItem('userName');
+        const userEmail = localStorage.getItem('userEmail');
+        
+        // If we have user data but no token, try to refresh
+        if (!token && (userName || userEmail)) {
+            console.log('🔄 Sidebar: No token but have user data - trying to refresh token');
+            
+            if (window.tryRefreshToken) {
+                const refreshSuccess = await window.tryRefreshToken();
+                if (refreshSuccess) {
+                    token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
+                }
+            }
+        }
+        
         if (!token) {
             sidebarSuggestions.innerHTML = `
                 <div class="text-center py-4">
