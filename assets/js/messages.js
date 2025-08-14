@@ -553,60 +553,76 @@ class RealTimeMessaging {
     }
 
     updateChatHeaderWithUser(user) {
+        console.log('=== UPDATING CHAT HEADER WITH USER ===', user.name);
+        
+        // Update basic header info
+        const chatUserName = document.getElementById('chat-user-name');
+        const chatUserAvatar = document.getElementById('chat-user-avatar');
+        const chatUserStatus = document.getElementById('chat-user-status');
+        
+        console.log('Header elements found:', {
+            name: !!chatUserName,
+            avatar: !!chatUserAvatar, 
+            status: !!chatUserStatus
+        });
+        
+        if (chatUserName) {
+            chatUserName.textContent = user.name;
+        }
+        
+        if (chatUserAvatar) {
+            chatUserAvatar.src = user.avatar || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${user.name ? user.name.charAt(0) : 'U'}`;
+            chatUserAvatar.alt = user.name;
+        }
+        
+        if (chatUserStatus) {
+            chatUserStatus.textContent = 'Hoạt động';
+            chatUserStatus.className = 'text-xs text-green-400';
+        }
+        
         // Find the chat header area in the chat window
-        const chatHeader = document.querySelector('#chat-window .flex.items-center.justify-between') ||
-                          document.querySelector('#chat-window > div:first-child');
+        const chatHeader = document.querySelector('#chat-header');
         
         if (chatHeader) {
-            // Update the left side with user info
-            const userInfoSection = chatHeader.querySelector('.flex.items-center.gap-4');
-            if (userInfoSection) {
-                userInfoSection.innerHTML = `
-                    <img src="${user.avatar || 'https://placehold.co/40x40/4F46E5/FFFFFF?text=' + (user.name ? user.name.charAt(0) : 'U')}" 
-                         alt="${user.name}" class="w-10 h-10 rounded-full">
-                    <div>
-                        <h3 class="font-bold text-white">${user.name}</h3>
-                        <p class="text-xs text-green-400">Hoạt động</p>
-                    </div>
-                `;
+            // Update the right side with call buttons if they don't exist
+            let rightSection = chatHeader.querySelector('.flex.items-center.gap-2:last-child');
+            
+            if (!rightSection) {
+                rightSection = document.createElement('div');
+                rightSection.className = 'flex items-center gap-2';
+                chatHeader.appendChild(rightSection);
             }
             
-            // Update the right side with call buttons
-            const rightSection = chatHeader.querySelector('.flex.items-center.gap-2') ||
-                                 chatHeader.querySelector('.flex:last-child');
-            
-            if (rightSection) {
-                rightSection.innerHTML = `
-                    <!-- Voice Call Button -->
-                    <button onclick="realTimeMessaging.initiateVoiceCall('${user.id}', '${user.name}')" 
-                            class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
-                            title="Gọi thoại">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                        </svg>
-                    </button>
-                    
-                    <!-- Video Call Button -->
-                    <button onclick="realTimeMessaging.initiateVideoCall('${user.id}', '${user.name}')" 
-                            class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
-                            title="Gọi video">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polygon points="23 7 16 12 23 17 23 7"/>
-                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                        </svg>
-                    </button>
-                    
-                    <!-- More Options -->
-                    <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
-                            title="Tùy chọn khác">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="1"/>
-                            <circle cx="19" cy="12" r="1"/>
-                            <circle cx="5" cy="12" r="1"/>
-                        </svg>
-                    </button>
-                `;
-            }
+            rightSection.innerHTML = `
+                <!-- Voice Call Button -->
+                <button onclick="realTimeMessaging.initiateVoiceCall('${user.id}', '${user.name}')" 
+                        class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
+                        title="Gọi thoại">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                </button>
+                
+                <!-- Video Call Button -->
+                <button onclick="realTimeMessaging.initiateVideoCall('${user.id}', '${user.name}')" 
+                        class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
+                        title="Gọi video">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="23 7 16 12 23 17 23 7"/>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                </button>
+                
+                <!-- More Options -->
+                <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
+                        title="Tùy chọn khác">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="19" cy="12" r="1"/>
+                        <circle cx="5" cy="12" r="1"/>
+                    </svg>
+                </button>
+            `;
         }
         
         console.log('Updated chat header with call buttons for user:', user.name);
