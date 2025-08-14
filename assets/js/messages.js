@@ -16,10 +16,45 @@ class RealTimeMessaging {
         this.loadConversations(); // Load real conversations from database
         this.updateChatLayout();
         
-        // Check for direct message after a longer delay to ensure DOM is fully ready
-        setTimeout(() => {
-            this.checkForDirectMessage();
-        }, 500);
+        // Check for direct message with multiple attempts and longer delays
+        // to ensure DOM is fully ready
+        this.attemptDirectMessageCheck();
+    }
+
+    attemptDirectMessageCheck() {
+        console.log('=== ATTEMPTING DIRECT MESSAGE CHECK ===');
+        
+        let attempts = 0;
+        const maxAttempts = 5;
+        const attemptInterval = 300; // ms
+        
+        const attemptCheck = () => {
+            attempts++;
+            console.log(`Direct message check attempt ${attempts}/${maxAttempts}`);
+            
+            // Check if required elements exist
+            const chatWindow = document.getElementById('chat-window');
+            const emptyPlaceholder = document.getElementById('empty-chat-placeholder');
+            const messageUserData = localStorage.getItem('message_user');
+            
+            console.log('Elements check:', {
+                chatWindow: !!chatWindow,
+                emptyPlaceholder: !!emptyPlaceholder,
+                messageUserData: !!messageUserData,
+                attempt: attempts
+            });
+            
+            if ((chatWindow && emptyPlaceholder) || attempts >= maxAttempts) {
+                // Elements are ready or we've reached max attempts
+                this.checkForDirectMessage();
+            } else {
+                // Try again after delay
+                setTimeout(attemptCheck, attemptInterval);
+            }
+        };
+        
+        // Start first attempt immediately, then use timeouts for subsequent attempts
+        attemptCheck();
     }
 
     checkForDirectMessage() {
@@ -30,6 +65,7 @@ class RealTimeMessaging {
         
         console.log('URL userId:', userId);
         console.log('localStorage message_user:', messageUserData);
+        console.log('Current URL:', window.location.href);
         
         if (messageUserData) {
             try {
@@ -52,7 +88,12 @@ class RealTimeMessaging {
                 localStorage.removeItem('message_user');
             }
         } else {
-            console.log('No message user data found');
+            console.log('No message user data found in localStorage');
+            
+            // Check if we have userId in URL but no message_user data
+            if (userId) {
+                console.log('Found userId in URL but no message_user data. This might be an issue.');
+            }
         }
     }
 
@@ -415,15 +456,19 @@ class RealTimeMessaging {
     }
 
     showConversationPlaceholder(user) {
-        console.log('Showing conversation placeholder for user:', user.name);
+        console.log('=== SHOWING CONVERSATION PLACEHOLDER ===');
+        console.log('User data:', user);
         
         // Add user to conversation list if not already there
         this.addUserToConversationList(user);
         
-        // Show the chat window first
+        // Show the chat window first - this is critical!
+        console.log('About to show chat window...');
         this.showChatWindow();
+        console.log('Chat window show command sent');
         
         // Update chat header with user info
+        console.log('Updating chat header with user:', user.name);
         this.updateChatHeaderWithUser(user);
         
         // Clear existing messages and show welcome message
@@ -432,6 +477,7 @@ class RealTimeMessaging {
                                 document.querySelector('#chat-window .messages-container');
         
         console.log('Messages container found:', !!messagesContainer);
+        console.log('Messages container element:', messagesContainer);
         
         if (messagesContainer) {
             messagesContainer.innerHTML = `
@@ -442,19 +488,36 @@ class RealTimeMessaging {
                     <p class="text-sm">Hãy gửi tin nhắn đầu tiên để bắt đầu!</p>
                 </div>
             `;
+            console.log('Messages container updated with welcome message');
         } else {
-            console.error('Messages container not found!');
+            console.error('Messages container not found! Available containers:');
+            console.log('All elements with messages-container class:', document.querySelectorAll('.messages-container'));
+            console.log('All elements with messages-container ID:', document.querySelectorAll('#messages-container'));
         }
 
         // Enable message input
         const messageInput = document.querySelector('.message-input') || document.getElementById('message-input');
+        console.log('Message input found:', !!messageInput);
+        
         if (messageInput) {
             messageInput.disabled = false;
             messageInput.placeholder = `Nhắn tin cho ${user.name}...`;
             console.log('Message input enabled for', user.name);
         } else {
             console.error('Message input not found!');
+            console.log('All input elements:', document.querySelectorAll('input[type="text"]'));
         }
+        
+        // Force a check of chat window visibility after a brief delay
+        setTimeout(() => {
+            const chatWindow = document.getElementById('chat-window');
+            const emptyPlaceholder = document.getElementById('empty-chat-placeholder');
+            console.log('=== POST-SETUP VISIBILITY CHECK ===');
+            console.log('Chat window visible:', chatWindow && !chatWindow.classList.contains('hidden') && chatWindow.style.display !== 'none');
+            console.log('Empty placeholder visible:', emptyPlaceholder && !emptyPlaceholder.classList.contains('hidden') && emptyPlaceholder.style.display !== 'none');
+            console.log('Chat window display style:', chatWindow ? chatWindow.style.display : 'element not found');
+            console.log('Empty placeholder display style:', emptyPlaceholder ? emptyPlaceholder.style.display : 'element not found');
+        }, 100);
     }
 
     addUserToConversationList(user) {

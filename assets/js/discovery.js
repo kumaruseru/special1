@@ -560,16 +560,31 @@ async function acceptFriendRequest(userId, buttonElement) {
 function openMessage(userId) {
     const user = currentUsers.find(u => u.id === userId);
     if (user) {
+        console.log('=== OPENING MESSAGE ===');
+        console.log('User data:', user);
+        
         showNotification(`Đang mở tin nhắn với ${user.name}...`, 'info');
-        // Redirect to messages page with user info
-        localStorage.setItem('message_user', JSON.stringify({
+        
+        // Store user data for messaging
+        const userData = {
             id: user.id,
             name: user.name,
+            username: user.username || user.name.toLowerCase().replace(/\s+/g, ''),
             avatar: user.avatar
-        }));
+        };
+        
+        console.log('Storing user data in localStorage:', userData);
+        localStorage.setItem('message_user', JSON.stringify(userData));
+        
+        // Verify data was stored
+        const storedData = localStorage.getItem('message_user');
+        console.log('Verified stored data:', storedData);
+        
+        // Redirect to messages page - reduced delay
         setTimeout(() => {
-            window.location.href = 'messages.html';
-        }, 1000);
+            console.log('Redirecting to messages page...');
+            window.location.href = 'messages.html?userId=' + user.id;
+        }, 500); // Reduced from 1000ms to 500ms
     }
 }
 
