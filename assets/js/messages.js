@@ -399,8 +399,34 @@ class RealTimeMessaging {
                 console.log('Auth token found:', !!token);
                 
                 if (token) {
-                    console.log('Attempting to authenticate with token...');
-                    this.socket.emit('authenticate', { token });
+                    try {
+                        // Check if token is expired before using it
+                        const tokenData = JSON.parse(atob(token.split('.')[1]));
+                        const isExpired = tokenData.exp && (tokenData.exp * 1000 < Date.now());
+                        
+                        if (isExpired) {
+                            console.warn('Token expired, clearing and using guest mode');
+                            localStorage.removeItem('authToken');
+                            localStorage.removeItem('token');
+                            this.socket.emit('join_chat', {
+                                userId: this.currentUser.id,
+                                username: this.currentUser.name,
+                                avatar: this.currentUser.avatar
+                            });
+                        } else {
+                            console.log('Attempting to authenticate with valid token...');
+                            this.socket.emit('authenticate', { token });
+                        }
+                    } catch (e) {
+                        console.warn('Invalid token format, using guest mode:', e.message);
+                        localStorage.removeItem('authToken');
+                        localStorage.removeItem('token');
+                        this.socket.emit('join_chat', {
+                            userId: this.currentUser.id,
+                            username: this.currentUser.name,
+                            avatar: this.currentUser.avatar
+                        });
+                    }
                 } else {
                     console.warn('No auth token found, using guest mode');
                     // Use current user as guest
@@ -490,7 +516,12 @@ class RealTimeMessaging {
 
         this.socket.on('authentication_failed', (data) => {
             console.warn('⚠️ Authentication failed, trying guest mode:', data.error);
+            // Clear invalid tokens
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('token');
+            
             // Graceful fallback to guest mode
+            console.log('Falling back to guest mode with user:', this.currentUser.name);
             this.socket.emit('join_chat', {
                 userId: this.currentUser.id,
                 username: this.currentUser.name,
