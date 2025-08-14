@@ -44,9 +44,32 @@ class WebRTCClient {
 
     // Authenticate user with server
     authenticateUser() {
-        const token = localStorage.getItem('token');
+        // Try multiple token sources
+        const token = localStorage.getItem('authToken') || 
+                      localStorage.getItem('token') ||
+                      sessionStorage.getItem('token');
+                      
         if (token) {
+            console.log('🔐 Authenticating WebRTC with token...');
             this.socket.emit('authenticate', { token });
+        } else {
+            console.warn('⚠️ No auth token found, attempting guest join');
+            // Try to get current user info for guest mode
+            const userInfoStr = localStorage.getItem('userInfo') || localStorage.getItem('currentUser');
+            if (userInfoStr) {
+                try {
+                    const userInfo = JSON.parse(userInfoStr);
+                    console.log('📝 Using guest mode with user info:', userInfo);
+                    
+                    this.socket.emit('join_chat', {
+                        userId: userInfo._id || userInfo.id,
+                        username: userInfo.name || userInfo.username,
+                        avatar: userInfo.avatar || userInfo.profilePicture
+                    });
+                } catch (error) {
+                    console.error('Error parsing user info for guest mode:', error);
+                }
+            }
         }
     }
 

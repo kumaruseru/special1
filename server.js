@@ -2081,17 +2081,34 @@ io.on('connection', (socket) => {
     // Initiate a call
     socket.on('initiate_call', (data) => {
         const { targetUserId, callType } = data; // callType: 'voice' or 'video'
+        
+        // Get caller info - try authenticated user first, then fallback to socket data
         const callerId = socket.userId;
-        const callerUsername = socket.username;
+        const callerUsername = socket.username || socket.email || 'Unknown User';
+        
+        console.log('📞 Initiate call request:', {
+            callerId,
+            callerUsername,
+            targetUserId,
+            callType,
+            isAuthenticated: socket.isAuthenticated
+        });
         
         if (!callerId || !targetUserId) {
-            socket.emit('call_error', { error: 'Invalid user data' });
+            console.error('❌ Missing user data:', { callerId, targetUserId });
+            socket.emit('call_error', { error: 'Invalid user data - missing user IDs' });
+            return;
+        }
+
+        if (callerId === targetUserId) {
+            socket.emit('call_error', { error: 'Cannot call yourself' });
             return;
         }
 
         const targetUserData = activeUsers.get(targetUserId);
         if (!targetUserData) {
-            socket.emit('call_error', { error: 'User is offline' });
+            console.error('❌ Target user not found:', targetUserId);
+            socket.emit('call_error', { error: 'User is offline or not found' });
             return;
         }
 
@@ -2108,6 +2125,7 @@ io.on('connection', (socket) => {
         };
 
         activeCalls.set(callId, callData);
+        console.log('✅ Call session created:', callId);
 
         // Notify target user
         io.to(targetUserData.socketId).emit('incoming_call', {

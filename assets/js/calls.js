@@ -113,7 +113,29 @@ window.onCallDeclined = () => {
 
 window.onCallError = (error) => {
     console.error('📞 Call error:', error);
-    alert(`Call Error: ${error.error || 'Unknown error occurred'}`);
+    
+    // Show more specific error messages
+    let errorMessage = 'Unknown error occurred';
+    if (error.error) {
+        switch (error.error) {
+            case 'Invalid user data - missing user IDs':
+                errorMessage = 'Không thể xác định người dùng. Vui lòng đăng nhập lại.';
+                break;
+            case 'Cannot call yourself':
+                errorMessage = 'Không thể gọi cho chính mình.';
+                break;
+            case 'User is offline or not found':
+                errorMessage = 'Người dùng đang offline hoặc không tồn tại.';
+                break;
+            case 'Invalid user data':
+                errorMessage = 'Dữ liệu người dùng không hợp lệ. Vui lòng thử lại.';
+                break;
+            default:
+                errorMessage = error.error;
+        }
+    }
+    
+    alert(`Lỗi cuộc gọi: ${errorMessage}`);
     window.onCallEnded();
 };
 
