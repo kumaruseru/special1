@@ -815,7 +815,7 @@ class RealTimeMessaging {
                 id: this.generateTelegramMessageId(),
                 senderId: this.currentUser.id,
                 senderName: this.currentUser.name,
-                senderAvatar: this.currentUser.avatar,
+                senderAvatar: this.currentUser.avatar || `https://placehold.co/32x32/4F46E5/FFFFFF?text=${(this.currentUser.name || 'U').charAt(0).toUpperCase()}`,
                 text: messageText,
                 timestamp: Date.now(),
                 type: 'text',
@@ -906,7 +906,7 @@ class RealTimeMessaging {
 
             messageElement.innerHTML = `
                 <div class="flex ${isOwn ? 'justify-end' : 'justify-start'} items-start gap-3">
-                    ${!isOwn ? `<img src="${message.senderAvatar}" alt="${message.senderName}" class="w-8 h-8 rounded-full object-cover">` : ''}
+                    ${!isOwn ? `<img src="${message.senderAvatar || 'https://placehold.co/32x32/4F46E5/FFFFFF?text=' + (message.senderName ? message.senderName.charAt(0) : 'U')}" alt="${message.senderName}" class="w-8 h-8 rounded-full object-cover">` : ''}
                     
                     <div class="max-w-xs lg:max-w-md ${isOwn ? 'order-first' : 'order-last'}">
                         ${!isOwn ? `<div class="text-xs text-gray-400 mb-1 px-2">${this.escapeHtml(message.senderName)}</div>` : ''}
@@ -920,7 +920,7 @@ class RealTimeMessaging {
                         </div>
                     </div>
                     
-                    ${isOwn ? `<img src="${message.senderAvatar}" alt="${message.senderName}" class="w-8 h-8 rounded-full object-cover">` : ''}
+                    ${isOwn ? `<img src="${message.senderAvatar || 'https://placehold.co/32x32/4F46E5/FFFFFF?text=' + (message.senderName ? message.senderName.charAt(0) : 'U')}" alt="${message.senderName}" class="w-8 h-8 rounded-full object-cover">` : ''}
                 </div>
             `;
         }
@@ -1242,6 +1242,7 @@ class RealTimeMessaging {
             text: text,
             senderId: this.currentUser.id,
             senderName: this.currentUser.name,
+            senderAvatar: this.currentUser.avatar || `https://placehold.co/32x32/4F46E5/FFFFFF?text=${(this.currentUser.name || 'U').charAt(0).toUpperCase()}`,
             recipientId: recipientId,
             timestamp: Date.now(),
             type: 'telegram_message'
