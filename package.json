@@ -4,14 +4,15 @@
   "description": "A modern space-themed social network application",
   "main": "index.html",
   "scripts": {
-    "start": "node server-multi-db.js",
+    "start": "node server-production.js",
     "dev": "node server-multi-db.js",
+    "production": "node server-production.js",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "static": "http-server -p 3000 -o -c-1",
-    "build": "echo 'Building application...'",
+    "build": "npm install && echo 'Build completed successfully!'",
     "lint": "eslint assets/js/**/*.js"
   },
   "keywords": [

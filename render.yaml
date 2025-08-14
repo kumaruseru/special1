@@ -1,0 +1,49 @@
+services:
+  # Main Web Service
+  - type: web
+    name: cosmic-social-network
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server-multi-db.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: cosmic-social-network
+          property: host
+      # Database URLs will be configured separately
+      - key: MONGODB_URI
+        value: # Will be added manually from MongoDB Atlas
+      - key: REDIS_URL
+        value: # Will be added manually from Redis service
+      - key: POSTGRES_URL
+        value: # Will be added manually from PostgreSQL service
+      - key: NEO4J_URI
+        value: # Will be added manually from Neo4j Aura
+      - key: NEO4J_USER
+        value: neo4j
+      - key: NEO4J_PASSWORD
+        value: # Will be added manually
+
+  # PostgreSQL Database
+  - type: pserv
+    name: cosmic-postgres
+    runtime: postgres
+    plan: free
+    databaseName: cosmic_social_network
+    user: cosmic_admin
+    ipAllowList: []
+
+  # Redis Service
+  - type: redis
+    name: cosmic-redis
+    plan: free
+    ipAllowList: []
