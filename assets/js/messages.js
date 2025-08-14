@@ -686,6 +686,11 @@ class RealTimeMessaging {
         console.log('- Message Input:', !!this.messageInput);
         console.log('- Send Button:', !!this.sendButton);
         
+        // Load real conversations from API
+        setTimeout(() => {
+            window.loadRealConversations();
+        }, 100);
+        
         // Disable message input by default (until a conversation is selected)
         if (this.messageInput) {
             this.messageInput.disabled = true;
@@ -1864,12 +1869,157 @@ const monitorActiveCalls = () => {
     }, 1000);
 };
 
+// Real conversations loading function
+window.loadRealConversations = function() {
+    console.log('🔄 Loading real conversations from API');
+    
+    const conversationsList = document.getElementById('conversations-list');
+    if (!conversationsList) {
+        console.error('❌ Conversations list element not found');
+        return;
+    }
+
+    // Show loading state
+    conversationsList.innerHTML = `
+        <div class="p-8 text-center text-gray-400">
+            <div class="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-blue-500 rounded-full mb-4"></div>
+            <p>Đang tải cuộc trò chuyện...</p>
+        </div>
+    `;
+
+    // Try to load from API
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
+    
+    if (token) {
+        fetch('/api/conversations', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.conversations && data.conversations.length > 0) {
+                console.log('✅ Loaded conversations from API:', data.conversations.length);
+                window.renderConversations(data.conversations);
+            } else {
+                console.log('📭 No conversations found, showing empty state');
+                window.showEmptyConversationsState();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading conversations:', error);
+            window.showEmptyConversationsState();
+        });
+    } else {
+        console.log('🔑 No auth token found, showing empty state');
+        window.showEmptyConversationsState();
+    }
+};
+
+window.renderConversations = function(conversations) {
+    const conversationsList = document.getElementById('conversations-list');
+    if (!conversationsList) return;
+
+    const conversationsHTML = conversations.map(conv => {
+        const otherUser = conv.participants?.find(p => p.id !== window.realTimeMessaging?.currentUser?.id);
+        if (!otherUser) return '';
+
+        return `
+            <div class="conversation-item ${conv.id === (window.realTimeMessaging?.currentChatId || '') ? 'active' : ''}" 
+                 data-conversation-id="${conv.id}" 
+                 onclick="window.selectConversation('${conv.id}', '${otherUser.name || otherUser.username}', '${otherUser.avatar || ''}')">
+                <div class="flex items-center gap-4 p-4 hover:bg-gray-800/50 cursor-pointer transition-colors">
+                    <div class="relative">
+                        <img src="${otherUser.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${(otherUser.name || otherUser.username || 'U').charAt(0).toUpperCase()}`}" 
+                             alt="${otherUser.name || otherUser.username}" 
+                             class="w-12 h-12 rounded-full" />
+                        ${otherUser.online ? '<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-gray-800 rounded-full"></div>' : ''}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="font-bold text-white truncate">${otherUser.name || otherUser.username}</h3>
+                            <span class="text-xs text-gray-400">${conv.lastMessageTime ? new Date(conv.lastMessageTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'}) : ''}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-gray-400 truncate">${conv.lastMessage || 'Chưa có tin nhắn'}</p>
+                            ${conv.unreadCount > 0 ? `<span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full ml-2">${conv.unreadCount}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).filter(html => html).join('');
+
+    conversationsList.innerHTML = conversationsHTML;
+};
+
+window.showEmptyConversationsState = function() {
+    const conversationsList = document.getElementById('conversations-list');
+    if (!conversationsList) return;
+
+    conversationsList.innerHTML = `
+        <div class="p-8 text-center text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 opacity-50">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            <h3 class="font-semibold text-white mb-2">Chưa có cuộc trò chuyện nào</h3>
+            <p class="text-sm">Bắt đầu cuộc trò chuyện mới từ trang Khám phá</p>
+            <button onclick="window.location.href='discovery.html'" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                Khám phá bạn bè
+            </button>
+        </div>
+    `;
+};
+
+window.selectConversation = function(conversationId, userName, userAvatar) {
+    console.log('🎯 Selecting conversation:', conversationId, userName);
+    
+    if (!window.realTimeMessaging) {
+        console.error('❌ RealTimeMessaging instance not found');
+        return;
+    }
+    
+    // Update current chat
+    window.realTimeMessaging.currentChatId = conversationId;
+    localStorage.setItem('currentChatId', conversationId);
+    
+    // Update active conversation in UI
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[data-conversation-id="${conversationId}"]`)?.classList.add('active');
+    
+    // Show chat window and hide empty placeholder
+    window.realTimeMessaging.updateChatLayout();
+    
+    // Update chat header with selected user
+    window.realTimeMessaging.updateChatHeaderWithUser({
+        name: userName,
+        avatar: userAvatar
+    });
+    
+    // Enable message input
+    if (window.realTimeMessaging.messageInput) {
+        window.realTimeMessaging.messageInput.disabled = false;
+        window.realTimeMessaging.messageInput.placeholder = `Nhập tin nhắn cho ${userName}...`;
+        window.realTimeMessaging.messageInput.focus();
+    }
+    
+    // Load messages for this conversation
+    window.realTimeMessaging.loadMessageHistory();
+    
+    console.log('✅ Conversation selected:', userName);
+};
+
 // Start monitoring when page loads
 document.addEventListener('DOMContentLoaded', () => {
     console.log('=== DOM CONTENT LOADED ===');
     
     // Initialize Real-time Messaging
-    realTimeMessaging = new RealTimeMessaging();
+    window.realTimeMessaging = new RealTimeMessaging();
     
     // Add a debug button for testing
     const debugButton = document.createElement('button');

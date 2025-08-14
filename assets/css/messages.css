@@ -1,7 +1,11 @@
 body {
     font-family: 'Inter', sans-serif;
-    background: #090a0f;
-    color: #E5E7EB; /* gray-200 */
+    background: #090a0f !important;
+    color: #E5E7EB;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 #cosmic-bg {
     position: fixed;
@@ -9,7 +13,8 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -10;
+    z-index: -999;
+    pointer-events: none;
 }
 .glass-pane {
     background: rgba(10, 10, 20, 0.5);

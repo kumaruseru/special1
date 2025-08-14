@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const { ObjectId } = require('mongodb');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -1085,6 +1086,176 @@ app.get('/api/users', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error getting users'
+        });
+    }
+});
+
+// Get user conversations
+app.get('/api/conversations', authenticateToken, async (req, res) => {
+    try {
+        console.log('📬 Getting conversations for user:', req.user?.id);
+        
+        if (!mongoConnection) {
+            console.log('Database not available for conversations');
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        const userId = req.user.id;
+        const db = mongoConnection.db();
+        const conversationsCollection = db.collection('conversations');
+        const usersCollection = db.collection('users');
+        
+        // Find conversations where user is a participant
+        const conversations = await conversationsCollection.find({
+            participantIds: userId
+        }).sort({ lastMessageTime: -1 }).toArray();
+
+        console.log(`Found ${conversations.length} conversations for user ${userId}`);
+        
+        // Enrich conversations with participant data
+        const enrichedConversations = await Promise.all(
+            conversations.map(async (conv) => {
+                // Get other participant info
+                const otherParticipantIds = conv.participantIds.filter(id => id !== userId);
+                const participants = await usersCollection.find({
+                    _id: { $in: otherParticipantIds.map(id => new ObjectId(id)) }
+                }).toArray();
+
+                return {
+                    id: conv._id.toString(),
+                    participants: participants.map(user => ({
+                        id: user._id.toString(),
+                        name: user.name,
+                        username: user.username,
+                        email: user.email,
+                        avatar: user.avatar || null,
+                        online: false // TODO: Add online status tracking
+                    })),
+                    lastMessage: conv.lastMessage || null,
+                    lastMessageTime: conv.lastMessageTime || conv.createdAt,
+                    unreadCount: 0, // TODO: Implement unread count
+                    createdAt: conv.createdAt
+                };
+            })
+        );
+
+        res.json({
+            success: true,
+            conversations: enrichedConversations,
+            message: 'Conversations loaded successfully'
+        });
+
+    } catch (error) {
+        console.error('❌ Get conversations error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting conversations'
+        });
+    }
+});
+
+// Create or get conversation with another user
+app.post('/api/conversations', authenticateToken, async (req, res) => {
+    try {
+        const { participantId } = req.body;
+        const currentUserId = req.user.id;
+        
+        console.log('💬 Creating/getting conversation:', { currentUserId, participantId });
+        
+        if (!mongoConnection) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        if (!participantId || participantId === currentUserId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid participant ID'
+            });
+        }
+
+        const db = mongoConnection.db();
+        const conversationsCollection = db.collection('conversations');
+        const usersCollection = db.collection('users');
+        
+        // Check if conversation already exists
+        const existingConversation = await conversationsCollection.findOne({
+            participantIds: { $all: [currentUserId, participantId], $size: 2 }
+        });
+
+        if (existingConversation) {
+            console.log('Found existing conversation:', existingConversation._id);
+            
+            // Get participant info
+            const participants = await usersCollection.find({
+                _id: { $in: [new ObjectId(currentUserId), new ObjectId(participantId)] }
+            }).toArray();
+
+            return res.json({
+                success: true,
+                conversation: {
+                    id: existingConversation._id.toString(),
+                    participants: participants.map(user => ({
+                        id: user._id.toString(),
+                        name: user.name,
+                        username: user.username,
+                        email: user.email,
+                        avatar: user.avatar || null,
+                        online: false
+                    })),
+                    lastMessage: existingConversation.lastMessage || null,
+                    lastMessageTime: existingConversation.lastMessageTime,
+                    createdAt: existingConversation.createdAt
+                },
+                message: 'Existing conversation found'
+            });
+        }
+
+        // Create new conversation
+        const newConversation = {
+            participantIds: [currentUserId, participantId],
+            createdAt: new Date(),
+            lastMessage: null,
+            lastMessageTime: null
+        };
+
+        const result = await conversationsCollection.insertOne(newConversation);
+        console.log('Created new conversation:', result.insertedId);
+
+        // Get participant info
+        const participants = await usersCollection.find({
+            _id: { $in: [new ObjectId(currentUserId), new ObjectId(participantId)] }
+        }).toArray();
+
+        res.json({
+            success: true,
+            conversation: {
+                id: result.insertedId.toString(),
+                participants: participants.map(user => ({
+                    id: user._id.toString(),
+                    name: user.name,
+                    username: user.username,
+                    email: user.email,
+                    avatar: user.avatar || null,
+                    online: false
+                })),
+                lastMessage: null,
+                lastMessageTime: null,
+                createdAt: newConversation.createdAt
+            },
+            message: 'New conversation created'
+        });
+
+    } catch (error) {
+        console.error('❌ Create conversation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating conversation'
         });
     }
 });
