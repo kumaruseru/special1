@@ -14,9 +14,15 @@
     <link rel="stylesheet" href="../assets/css/messages.css">
     <!-- Environment Configuration -->
     <script src="../assets/js/env-config.js"></script>
-    <!-- Socket.IO Client with CDN fallback -->
-    <script src="/socket.io/socket.io.js" 
-            onerror="this.onerror=null; this.src='https://cdn.socket.io/4.8.1/socket.io.min.js'"></script>
+    <!-- Socket.IO Client with enhanced fallback -->
+    <script>
+        // Force load Socket.IO from CDN for production
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            document.write('<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"><\/script>');
+        } else {
+            document.write('<script src="/socket.io/socket.io.js" onerror="this.onerror=null; this.src=\'https://cdn.socket.io/4.8.1/socket.io.min.js\'"><\/script>');
+        }
+    </script>
     <!-- Shared JavaScript -->
     <script src="../assets/js/shared.js"></script>
 </head>

@@ -153,13 +153,22 @@ class RealTimeMessaging {
         }
 
         // Enable message input
-        const messageInput = document.querySelector('.message-input');
+        const messageInput = document.getElementById('message-input');
         if (messageInput) {
             messageInput.disabled = false;
             messageInput.placeholder = `Nhắn tin cho ${user.name}...`;
-            console.log('Message input enabled for', user.name);
+            console.log('✅ Message input enabled for', user.name);
         } else {
-            console.error('Message input not found!');
+            console.error('❌ Message input not found! Looking for #message-input');
+            // Try alternative selectors
+            const altInput = document.querySelector('input[placeholder*="tin nhắn"]') || 
+                           document.querySelector('.message-input') ||
+                           document.querySelector('input[type="text"]');
+            if (altInput) {
+                altInput.disabled = false;
+                altInput.placeholder = `Nhắn tin cho ${user.name}...`;
+                console.log('✅ Found alternative message input');
+            }
         }
     }
 
@@ -318,12 +327,41 @@ class RealTimeMessaging {
     initializeWebSocket() {
         console.log('=== INITIALIZING TELEGRAM-STYLE WEBSOCKET ===');
         
-        // Check if Socket.IO is available
-        if (typeof io === 'undefined') {
-            console.error('❌ Socket.IO not loaded, using fallback messaging');
-            this.initializeFallbackMessaging();
-            return;
+        // Enhanced Socket.IO availability check
+        let socketAvailable = false;
+        
+        // Wait a bit for Socket.IO to load from CDN if needed
+        const checkSocketIO = () => {
+            if (typeof io !== 'undefined') {
+                socketAvailable = true;
+                this.setupSocketConnection();
+            } else {
+                console.log('🔄 Socket.IO not yet available, retrying...');
+                setTimeout(checkSocketIO, 1000);
+            }
+        };
+        
+        // Try immediately first
+        if (typeof io !== 'undefined') {
+            console.log('✅ Socket.IO available immediately');
+            this.setupSocketConnection();
+        } else {
+            console.log('⏳ Socket.IO not available, waiting...');
+            // Try again after a delay
+            setTimeout(checkSocketIO, 500);
+            
+            // Fallback after 5 seconds
+            setTimeout(() => {
+                if (!socketAvailable) {
+                    console.error('❌ Socket.IO failed to load, using fallback messaging');
+                    this.initializeFallbackMessaging();
+                }
+            }, 5000);
         }
+    }
+    
+    setupSocketConnection() {
+        console.log('🚀 Setting up Telegram-style Socket.IO connection');
         
         // Initialize Telegram-style Socket.IO connection
         try {
@@ -396,119 +434,126 @@ class RealTimeMessaging {
                 }
             });
 
-            // Telegram-style heartbeat system
-            this.socket.on('ping', () => {
-                // Server is checking if we're alive
-                this.socket.emit('pong', {
-                    timestamp: Date.now(),
-                    clientId: this.currentUser?.id
-                });
-            });
-
-            // Connection health monitoring
-            this.socket.on('connection_quality', (data) => {
-                console.log('📶 Connection quality:', data.latency + 'ms');
-                this.updateConnectionQuality(data.latency);
-            });
-
-            // User presence updates (like Telegram's last seen)
-            this.socket.on('user_presence_update', (data) => {
-                this.updateUserPresence(data.userId, data.status, data.lastSeen);
-            });
-
-            // Telegram-style message acknowledgments
-            this.socket.on('message_ack', (data) => {
-                console.log('✅ Message acknowledged:', data.messageId);
-                this.markMessageAsDelivered(data.messageId, data.deliveredAt);
-            });
-
-            // Queued messages when we come back online
-            this.socket.on('queued_messages', (messages) => {
-                console.log('📬 Received queued messages:', messages.length);
-                messages.forEach(message => {
-                    this.displayMessage(message, false); // Don't play sound for queued
-                });
-            });
-
-            // Authentication response
-            this.socket.on('authenticated', (data) => {
-                console.log('✅ Authenticated for messaging:', data);
-                this.authenticatedUserId = data.userId;
-                this.authenticatedUsername = data.username;
-            });
-
-            this.socket.on('authentication_failed', (data) => {
-                console.warn('❌ Authentication failed:', data.error);
-                // Fallback to guest mode
-                this.socket.emit('join_chat', {
-                    userId: this.currentUser.id,
-                    username: this.currentUser.name,
-                    avatar: this.currentUser.avatar
-                });
-            });
-
-            // Join chat responses
-            this.socket.on('join_success', (data) => {
-                console.log('✅ Successfully joined chat:', data.message);
-            });
-
-            this.socket.on('join_error', (data) => {
-                console.error('❌ Join chat failed:', data.error);
-                this.showNotification('Không thể tham gia chat: ' + data.error, 'error');
-            });
-
-            // Enhanced message responses
-            this.socket.on('telegram_message_ack', (data) => {
-                console.log('✅ Telegram message acknowledged:', data);
-                this.markMessageAsDelivered(data.messageId, data.deliveredAt);
-            });
-
-            this.socket.on('message_error', (data) => {
-                console.error('❌ Message send failed:', data.error);
-                this.showNotification('Không thể gửi tin nhắn: ' + data.error, 'error');
-                this.updateMessageStatus(data.messageId, 'failed');
-            });
-
-            // Real-time message events
-            this.socket.on('new_telegram_message', (data) => {
-                console.log('📨 Received Telegram-style message:', data);
-                this.receiveMessage(data);
-            });
-
-            this.socket.on('typing_start', (data) => {
-                if (data.userId !== this.currentUser.id) {
-                    this.typingUsers.add(data.username);
-                    this.showTypingIndicator();
-                }
-            });
-
-            this.socket.on('typing_stop', (data) => {
-                if (data.userId !== this.currentUser.id) {
-                    this.typingUsers.delete(data.username);
-                    this.updateTypingIndicator();
-                }
-            });
-
-            this.socket.on('user_joined', (data) => {
-                if (data.userId !== this.currentUser.id) {
-                    this.onlineUsers.add(data);
-                    this.showSystemMessage(`${data.username} đã tham gia cuộc trò chuyện`);
-                    this.updateOnlineUsers();
-                }
-            });
-
-            this.socket.on('user_left', (data) => {
-                if (data.userId !== this.currentUser.id) {
-                    this.onlineUsers.delete(data);
-                    this.showSystemMessage(`${data.username} đã rời khỏi cuộc trò chuyện`);
-                    this.updateOnlineUsers();
-                }
-            });
+            // Add all the Telegram-style event handlers
+            this.setupTelegramEventHandlers();
 
         } catch (error) {
             console.error('❌ Failed to initialize Socket.IO:', error);
             this.initializeFallbackMessaging();
         }
+    }
+    
+    setupTelegramEventHandlers() {
+        if (!this.socket) return;
+        
+        // Telegram-style heartbeat system
+        this.socket.on('ping', () => {
+            // Server is checking if we're alive
+            this.socket.emit('pong', {
+                timestamp: Date.now(),
+                clientId: this.currentUser?.id
+            });
+        });
+
+        // Connection health monitoring
+        this.socket.on('connection_quality', (data) => {
+            console.log('📶 Connection quality:', data.latency + 'ms');
+            this.updateConnectionQuality(data.latency);
+        });
+
+        // User presence updates (like Telegram's last seen)
+        this.socket.on('user_presence_update', (data) => {
+            this.updateUserPresence(data.userId, data.status, data.lastSeen);
+        });
+
+        // Telegram-style message acknowledgments
+        this.socket.on('message_ack', (data) => {
+            console.log('✅ Message acknowledged:', data.messageId);
+            this.markMessageAsDelivered(data.messageId, data.deliveredAt);
+        });
+
+        // Queued messages when we come back online
+        this.socket.on('queued_messages', (messages) => {
+            console.log('📬 Received queued messages:', messages.length);
+            messages.forEach(message => {
+                this.displayMessage(message, false); // Don't play sound for queued
+            });
+        });
+
+        // Authentication response
+        this.socket.on('authenticated', (data) => {
+            console.log('✅ Authenticated for messaging:', data);
+            this.authenticatedUserId = data.userId;
+            this.authenticatedUsername = data.username;
+        });
+
+        this.socket.on('authentication_failed', (data) => {
+            console.warn('❌ Authentication failed:', data.error);
+            // Fallback to guest mode
+            this.socket.emit('join_chat', {
+                userId: this.currentUser.id,
+                username: this.currentUser.name,
+                avatar: this.currentUser.avatar
+            });
+        });
+
+        // Join chat responses
+        this.socket.on('join_success', (data) => {
+            console.log('✅ Successfully joined chat:', data.message);
+        });
+
+        this.socket.on('join_error', (data) => {
+            console.error('❌ Join chat failed:', data.error);
+            this.showNotification('Không thể tham gia chat: ' + data.error, 'error');
+        });
+
+        // Enhanced message responses
+        this.socket.on('telegram_message_ack', (data) => {
+            console.log('✅ Telegram message acknowledged:', data);
+            this.markMessageAsDelivered(data.messageId, data.deliveredAt);
+        });
+
+        this.socket.on('message_error', (data) => {
+            console.error('❌ Message send failed:', data.error);
+            this.showNotification('Không thể gửi tin nhắn: ' + data.error, 'error');
+            this.updateMessageStatus(data.messageId, 'failed');
+        });
+
+        // Real-time message events
+        this.socket.on('new_telegram_message', (data) => {
+            console.log('📨 Received Telegram-style message:', data);
+            this.receiveMessage(data);
+        });
+
+        this.socket.on('typing_start', (data) => {
+            if (data.userId !== this.currentUser.id) {
+                this.typingUsers.add(data.username);
+                this.showTypingIndicator();
+            }
+        });
+
+        this.socket.on('typing_stop', (data) => {
+            if (data.userId !== this.currentUser.id) {
+                this.typingUsers.delete(data.username);
+                this.updateTypingIndicator();
+            }
+        });
+
+        this.socket.on('user_joined', (data) => {
+            if (data.userId !== this.currentUser.id) {
+                this.onlineUsers.add(data);
+                this.showSystemMessage(`${data.username} đã tham gia cuộc trò chuyện`);
+                this.updateOnlineUsers();
+            }
+        });
+
+        this.socket.on('user_left', (data) => {
+            if (data.userId !== this.currentUser.id) {
+                this.onlineUsers.delete(data);
+                this.showSystemMessage(`${data.username} đã rời khỏi cuộc trò chuyện`);
+                this.updateOnlineUsers();
+            }
+        });
     }
     
     // Fallback messaging system using BroadcastChannel
