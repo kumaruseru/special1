@@ -24,10 +24,7 @@ async function initializeDatabase() {
         }
 
         await mongoose.connect(mongoUri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 10000,
-            socketTimeoutMS: 45000,
         });
         
         mongoConnection = true;

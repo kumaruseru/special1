@@ -19,8 +19,8 @@ Start Command: node server-production.js
 ```
 NODE_ENV=production
 PORT=10000
-MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/cosmic_social_network
-JWT_SECRET=your-super-secret-jwt-key-minimum-64-characters
+MONGODB_URI=mongodb+srv://nghiaht281003:Huong1505@special.7aeh83z.mongodb.net/cosmic_social_network?retryWrites=true&w=majority&appName=special
+JWT_SECRET=f9e396d9e9c8e20d10429fa3414ee792570dc4eee89d07b9db0a5f320dae6206221d8f07bc30058e6f1a04b65ac93fb91e34fb076a200a6ebed5155472873e984
 CORS_ORIGIN=https://your-app-name.onrender.com
 ```
 
