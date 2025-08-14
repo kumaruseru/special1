@@ -137,12 +137,22 @@ async function loadSuggestedUsers() {
     `;
 
     try {
-        const token = localStorage.getItem('authToken');
+        // Check all possible token names (same as shared.js)
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
+        console.log('🔍 Discovery: Token check:', { 
+            authToken: !!localStorage.getItem('authToken'),
+            token: !!localStorage.getItem('token'),
+            cosmic_token: !!localStorage.getItem('cosmic_token'),
+            finalToken: !!token
+        });
+        
         if (!token) {
+            console.warn('🔒 No authentication token found, showing login required');
             showLoginRequired();
             return;
         }
 
+        console.log('📡 Fetching users from API...');
         const response = await fetch('/api/users?limit=10&filter=' + currentFilter, {
             method: 'GET',
             headers: {
@@ -151,7 +161,17 @@ async function loadSuggestedUsers() {
             }
         });
 
+        console.log('📡 API Response status:', response.status);
+        
+        if (!response.ok) {
+            console.error('❌ API request failed:', response.status, response.statusText);
+            // If API fails, show mock users instead of login required
+            showMockUsers();
+            return;
+        }
+
         const data = await response.json();
+        console.log('📊 API Response data:', data);
 
         if (data.success) {
             currentUsers = data.users || [];
@@ -196,8 +216,12 @@ async function performSearch(query) {
     `;
 
     try {
-        const token = localStorage.getItem('authToken');
+        // Check all possible token names (same as loadSuggestedUsers)
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
+        console.log('🔍 Search: Token check:', !!token);
+        
         if (!token) {
+            console.warn('🔒 No authentication token found for search');
             showLoginRequired();
             return;
         }
@@ -250,6 +274,35 @@ function showLoginRequired() {
             </a>
         </div>
     `;
+}
+
+function showMockUsers() {
+    console.log('📋 Showing mock users due to API unavailability');
+    const mockUsers = [
+        {
+            id: 'mock_1',
+            firstName: 'Alice',
+            lastName: 'Johnson',
+            email: 'alice@example.com',
+            avatar: 'https://placehold.co/80x80/4F46E5/FFFFFF?text=A'
+        },
+        {
+            id: 'mock_2', 
+            firstName: 'Bob',
+            lastName: 'Smith',
+            email: 'bob@example.com',
+            avatar: 'https://placehold.co/80x80/10B981/FFFFFF?text=B'
+        },
+        {
+            id: 'mock_3',
+            firstName: 'Carol',
+            lastName: 'Davis',
+            email: 'carol@example.com', 
+            avatar: 'https://placehold.co/80x80/F59E0B/FFFFFF?text=C'
+        }
+    ];
+    
+    displaySearchResults(mockUsers, null, 'Gợi ý cho bạn (Demo)');
 }
 
 function displaySearchResults(results, query, title = 'Kết quả tìm kiếm') {
