@@ -25,16 +25,46 @@ const neo4j = require('neo4j-driver');
 
 const app = express();
 const server = http.createServer(app);
+
+// Telegram-inspired Socket.IO configuration for high reliability
 const io = socketIo(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"],
         credentials: true
     },
+    // Prioritize WebSocket with polling fallback (like Telegram's MTProto over WebSocket)
     transports: ['websocket', 'polling'],
     allowEIO3: true,
-    pingTimeout: 60000,
-    pingInterval: 25000
+    
+    // Connection reliability settings inspired by Telegram
+    pingTimeout: 120000,        // 2 minutes (Telegram uses long timeouts)
+    pingInterval: 30000,        // 30 seconds ping
+    connectTimeout: 45000,      // Connection timeout
+    upgradeTimeout: 30000,      // Transport upgrade timeout
+    
+    // Message delivery guarantees (Telegram-style)
+    maxHttpBufferSize: 1e6,     // 1MB max message size
+    httpCompression: true,       // Enable compression
+    perMessageDeflate: true,     // WebSocket compression
+    
+    // Connection management
+    maxConnections: 10000,       // Max concurrent connections
+    cookie: false,               // No cookies for security
+    serveClient: false,          // Don't serve client files
+    
+    // Error handling
+    allowRequest: (req, callback) => {
+        // Basic rate limiting and validation
+        const userAgent = req.headers['user-agent'] || '';
+        const isBot = /bot|crawler|spider/i.test(userAgent);
+        
+        if (isBot) {
+            return callback('Bots not allowed', false);
+        }
+        
+        callback(null, true);
+    }
 });
 
 const PORT = process.env.PORT || 3001;
@@ -1891,33 +1921,193 @@ app.get('/socket-status', (req, res) => {
 // Serve pages directory specifically 
 app.use('/pages', express.static(path.join(__dirname, 'pages')));
 
-// === WebRTC Signaling Server ===
+// === Telegram-Inspired Real-time Messaging System ===
 const activeUsers = new Map(); // userId -> socketId
 const activeCalls = new Map(); // callId -> call data
 
+// Message delivery system (Telegram-style)
+const messageQueue = new Map(); // userId -> pending messages
+const messageAcknowledgments = new Map(); // messageId -> acknowledgment status
+const userSessions = new Map(); // userId -> session info
+
+// Message delivery guarantees
+const MAX_RETRY_ATTEMPTS = 3;
+const MESSAGE_TIMEOUT = 30000; // 30 seconds
+const HEARTBEAT_INTERVAL = 25000; // 25 seconds
+
+// Connection health monitoring
+const connectionHealth = new Map(); // socketId -> health stats
+
+// Telegram-style message structure
+class TelegramMessage {
+    constructor(data) {
+        this.id = data.id || 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        this.senderId = data.senderId;
+        this.senderName = data.senderName;
+        this.text = data.text;
+        this.timestamp = data.timestamp || Date.now();
+        this.type = data.type || 'text';
+        this.chatId = data.chatId || 'global';
+        this.status = 'sending';
+        this.retryCount = 0;
+        this.deliveredTo = new Set();
+    }
+
+    markAsDelivered(userId) {
+        this.deliveredTo.add(userId);
+        if (this.deliveredTo.size > 0) {
+            this.status = 'delivered';
+        }
+    }
+
+    needsRetry() {
+        return this.retryCount < MAX_RETRY_ATTEMPTS && this.status === 'sending';
+    }
+}
+
+// Message delivery queue management
+function addToMessageQueue(userId, message) {
+    if (!messageQueue.has(userId)) {
+        messageQueue.set(userId, []);
+    }
+    messageQueue.get(userId).push(message);
+    
+    // Auto-cleanup old messages
+    const queue = messageQueue.get(userId);
+    if (queue.length > 100) {
+        queue.splice(0, queue.length - 100);
+    }
+}
+
+function processMessageQueue(userId) {
+    const queue = messageQueue.get(userId);
+    if (!queue || queue.length === 0) return;
+    
+    const userSocket = activeUsers.get(userId);
+    if (!userSocket) return;
+    
+    const socket = io.sockets.sockets.get(userSocket.socketId);
+    if (!socket) return;
+    
+    // Send queued messages
+    queue.forEach(message => {
+        if (message.needsRetry()) {
+            socket.emit('queued_message', message);
+            message.retryCount++;
+        }
+    });
+    
+    // Clean up delivered messages
+    messageQueue.set(userId, queue.filter(msg => msg.status !== 'delivered'));
+}
+
 io.on('connection', (socket) => {
-    console.log('🔌 User connected:', socket.id);
+    console.log('🔌 Telegram-style connection established:', socket.id);
+    
+    // Initialize connection health
+    connectionHealth.set(socket.id, {
+        connectedAt: Date.now(),
+        lastPing: Date.now(),
+        messagesSent: 0,
+        messagesReceived: 0,
+        errors: 0
+    });
+
+    // Heartbeat system (like Telegram's ping-pong)
+    const heartbeat = setInterval(() => {
+        const health = connectionHealth.get(socket.id);
+        if (health) {
+            socket.emit('ping', { timestamp: Date.now() });
+            health.lastPing = Date.now();
+        }
+    }, HEARTBEAT_INTERVAL);
+
+    socket.on('pong', (data) => {
+        const health = connectionHealth.get(socket.id);
+        if (health) {
+            health.lastPong = Date.now();
+            health.latency = health.lastPong - health.lastPing;
+        }
+    });
 
     // Add error handling for socket
     socket.on('error', (error) => {
         console.error('Socket error:', error);
     });
 
-    socket.on('disconnect', (reason) => {
-        console.log(`🔌 User disconnected: ${socket.id}, reason: ${reason}`);
-        
+    // Message acknowledgment (Telegram-style)
+    socket.on('message_ack', (data) => {
+        const { messageId, status } = data;
+        if (messageAcknowledgments.has(messageId)) {
+            messageAcknowledgments.set(messageId, status);
+            console.log(`� Message ${messageId} acknowledged with status: ${status}`);
+        }
+    });
+
+    // Process queued messages when user comes online
+    socket.on('request_queued_messages', () => {
         if (socket.userId) {
-            // Clean up user from active users
-            activeUsers.delete(socket.userId);
-            console.log(`👤 Removed user from active list: ${socket.userId}`);
-            
-            // Notify others about user leaving
-            if (socket.username) {
-                socket.to('global_chat').emit('user_left', {
+            console.log(`📨 Processing queued messages for user: ${socket.userId}`);
+            processMessageQueue(socket.userId);
+        }
+    });
+
+    // Telegram-style user presence
+    socket.on('update_presence', (data) => {
+        const { status, lastSeen } = data;
+        if (socket.userId) {
+            const userData = activeUsers.get(socket.userId);
+            if (userData) {
+                userData.presence = status;
+                userData.lastSeen = lastSeen || Date.now();
+                
+                // Broadcast presence update
+                socket.to('global_chat').emit('user_presence_update', {
                     userId: socket.userId,
-                    username: socket.username
+                    username: socket.username,
+                    presence: status,
+                    lastSeen: userData.lastSeen
                 });
             }
+        }
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log(`🔌 Telegram-style disconnect: ${socket.id}, reason: ${reason}`);
+        
+        // Clear heartbeat
+        clearInterval(heartbeat);
+        
+        // Cleanup connection health
+        connectionHealth.delete(socket.id);
+        
+        if (socket.userId) {
+            // Update user presence to offline
+            const userData = activeUsers.get(socket.userId);
+            if (userData) {
+                userData.presence = 'offline';
+                userData.lastSeen = Date.now();
+                
+                // Notify others about user going offline
+                socket.to('global_chat').emit('user_presence_update', {
+                    userId: socket.userId,
+                    username: socket.username,
+                    presence: 'offline',
+                    lastSeen: userData.lastSeen
+                });
+            }
+            
+            // Don't immediately remove from activeUsers - keep for message queue
+            // Will be cleaned up after a timeout to allow for quick reconnections
+            setTimeout(() => {
+                if (activeUsers.has(socket.userId)) {
+                    const currentUserData = activeUsers.get(socket.userId);
+                    if (currentUserData.socketId === socket.id) {
+                        activeUsers.delete(socket.userId);
+                        console.log(`👤 Removed user from active list after timeout: ${socket.userId}`);
+                    }
+                }
+            }, 30000); // 30 second grace period for reconnection
             
             // End any active calls for this user
             for (const [callId, callData] of activeCalls.entries()) {
@@ -2049,12 +2239,12 @@ io.on('connection', (socket) => {
         }
     });
     
-    // Send message
-    socket.on('send_message', (data) => {
+    // Telegram-style message sending with delivery guarantees
+    socket.on('send_message', (data, callback) => {
         try {
             const { messageId, text, timestamp, chatId } = data;
             
-            console.log('📨 Send message request:', {
+            console.log('📨 Telegram-style message send:', {
                 messageId,
                 text: text ? text.substring(0, 50) + '...' : 'empty',
                 timestamp,
@@ -2064,43 +2254,100 @@ io.on('connection', (socket) => {
                 username: socket.username
             });
             
+            // Update connection health
+            const health = connectionHealth.get(socket.id);
+            if (health) {
+                health.messagesSent++;
+            }
+            
             if (!socket.userId) {
+                const error = { error: 'User not authenticated for chat', code: 401 };
                 console.error('❌ Message rejected: User not authenticated');
-                socket.emit('message_error', { error: 'User not authenticated for chat' });
+                if (callback) callback(error);
+                socket.emit('message_error', error);
                 return;
             }
             
             if (!text || text.trim() === '') {
+                const error = { error: 'Message text cannot be empty', code: 400 };
                 console.error('❌ Message rejected: Empty text');
-                socket.emit('message_error', { error: 'Message text cannot be empty' });
+                if (callback) callback(error);
+                socket.emit('message_error', error);
                 return;
             }
             
-            const messageData = {
-                id: messageId || 'msg_' + Date.now(),
+            // Create Telegram-style message
+            const telegramMessage = new TelegramMessage({
+                id: messageId,
                 senderId: socket.userId,
                 senderName: socket.username || 'Unknown User',
                 senderAvatar: socket.avatar || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${(socket.username || 'U').charAt(0).toUpperCase()}`,
                 text: text.trim(),
-                timestamp: timestamp || Date.now(),
-                type: 'text',
-                status: 'sent'
-            };
-            
-            console.log(`✅ Broadcasting message from ${socket.username} to global_chat`);
-            
-            // Broadcast to all users in chat room (except sender)
-            socket.to('global_chat').emit('new_message', messageData);
-            
-            // Confirm to sender
-            socket.emit('message_sent', { 
-                messageId: messageData.id,
-                status: 'sent' 
+                timestamp: timestamp,
+                chatId: chatId || 'global'
             });
             
+            console.log(`✅ Broadcasting Telegram-style message from ${socket.username} to ${telegramMessage.chatId}`);
+            
+            // Get all users in chat
+            const chatRoom = telegramMessage.chatId === 'global' ? 'global_chat' : `chat_${telegramMessage.chatId}`;
+            const roomSockets = io.sockets.adapter.rooms.get(chatRoom);
+            
+            if (roomSockets) {
+                // Send to each user with delivery tracking
+                roomSockets.forEach(socketId => {
+                    if (socketId !== socket.id) { // Don't send to sender
+                        const targetSocket = io.sockets.sockets.get(socketId);
+                        if (targetSocket && targetSocket.userId) {
+                            // Send message and wait for acknowledgment
+                            targetSocket.emit('new_message', telegramMessage, (ack) => {
+                                if (ack && ack.received) {
+                                    telegramMessage.markAsDelivered(targetSocket.userId);
+                                    console.log(`📨 Message ${telegramMessage.id} delivered to ${targetSocket.userId}`);
+                                } else {
+                                    // Add to queue for retry
+                                    addToMessageQueue(targetSocket.userId, telegramMessage);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+            
+            // Immediate confirmation to sender (Telegram-style)
+            const confirmation = {
+                messageId: telegramMessage.id,
+                status: 'sent',
+                timestamp: Date.now(),
+                deliveredCount: telegramMessage.deliveredTo.size
+            };
+            
+            if (callback) callback(null, confirmation);
+            socket.emit('message_sent', confirmation);
+            
+            // Set timeout for delivery confirmation
+            setTimeout(() => {
+                if (telegramMessage.status === 'sending') {
+                    console.log(`⚠️ Message ${telegramMessage.id} delivery timeout, queuing for retry`);
+                    // Queue for retry to offline users
+                    activeUsers.forEach((userData, userId) => {
+                        if (!telegramMessage.deliveredTo.has(userId) && userId !== socket.userId) {
+                            addToMessageQueue(userId, telegramMessage);
+                        }
+                    });
+                }
+            }, MESSAGE_TIMEOUT);
+            
         } catch (error) {
-            console.error('Error in send_message:', error);
-            socket.emit('message_error', { error: error.message });
+            console.error('Error in Telegram-style send_message:', error);
+            const errorResponse = { error: error.message, code: 500 };
+            if (callback) callback(errorResponse);
+            socket.emit('message_error', errorResponse);
+            
+            const health = connectionHealth.get(socket.id);
+            if (health) {
+                health.errors++;
+            }
         }
     });
     

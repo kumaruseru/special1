@@ -5,8 +5,8 @@ services:
     runtime: node
     plan: free
     buildCommand: npm install
-    startCommand: node server-multi-db.js
-    healthCheckPath: /health
+    startCommand: npm run production
+    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
