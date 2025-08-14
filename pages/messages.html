@@ -14,14 +14,29 @@
     <link rel="stylesheet" href="../assets/css/messages.css">
     <!-- Environment Configuration -->
     <script src="../assets/js/env-config.js"></script>
-    <!-- Socket.IO Client with enhanced fallback -->
+    <!-- Socket.IO Client with modern loading -->
     <script>
-        // Force load Socket.IO from CDN for production
-        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            document.write('<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"><\/script>');
-        } else {
-            document.write('<script src="/socket.io/socket.io.js" onerror="this.onerror=null; this.src=\'https://cdn.socket.io/4.8.1/socket.io.min.js\'"><\/script>');
-        }
+        // Modern Socket.IO loading for production
+        (function() {
+            const isProduction = window.location.hostname !== 'localhost' && 
+                               window.location.hostname !== '127.0.0.1';
+            
+            const script = document.createElement('script');
+            script.src = isProduction ? 
+                'https://cdn.socket.io/4.8.1/socket.io.min.js' : 
+                '/socket.io/socket.io.js';
+            
+            script.onerror = function() {
+                if (!isProduction) {
+                    // Fallback to CDN if local fails
+                    const fallbackScript = document.createElement('script');
+                    fallbackScript.src = 'https://cdn.socket.io/4.8.1/socket.io.min.js';
+                    document.head.appendChild(fallbackScript);
+                }
+            };
+            
+            document.head.appendChild(script);
+        })();
     </script>
     <!-- Shared JavaScript -->
     <script src="../assets/js/shared.js"></script>
@@ -252,7 +267,8 @@
     </div>
 
     <!-- Third-party Libraries -->
-    <script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
+    <!-- Using newer Three.js version to avoid deprecation warnings -->
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     
     <!-- Encryption Utilities -->

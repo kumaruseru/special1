@@ -383,6 +383,7 @@ class RealTimeMessaging {
                 console.log('✅ Telegram-style connection established:', this.socket.id);
                 this.isConnected = true;
                 this.updateConnectionStatus(true);
+                this.showConnectionMessage('🚀 Kết nối thành công! Telegram-style messaging đã sẵn sàng.', 'success');
                 
                 // Request any queued messages
                 this.socket.emit('request_queued_messages');
@@ -488,8 +489,8 @@ class RealTimeMessaging {
         });
 
         this.socket.on('authentication_failed', (data) => {
-            console.warn('❌ Authentication failed:', data.error);
-            // Fallback to guest mode
+            console.warn('⚠️ Authentication failed, trying guest mode:', data.error);
+            // Graceful fallback to guest mode
             this.socket.emit('join_chat', {
                 userId: this.currentUser.id,
                 username: this.currentUser.name,
@@ -1286,7 +1287,8 @@ class RealTimeMessaging {
         messageElement.id = 'connection-message';
         messageElement.className = `fixed top-4 right-4 p-3 rounded-lg shadow-lg z-50 ${
             type === 'error' ? 'bg-red-500' : 
-            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+            type === 'warning' ? 'bg-yellow-500' : 
+            type === 'success' ? 'bg-green-500' : 'bg-blue-500'
         } text-white`;
         messageElement.textContent = message;
         
