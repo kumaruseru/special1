@@ -1525,6 +1525,74 @@ app.get('/api/messages/:userId', verifyToken, async (req, res) => {
     }
 });
 
+// Get messages for a specific conversation with another user
+app.get('/api/conversations/:userId/messages', verifyToken, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        console.log('💬 Getting conversation messages between:', req.user.userId, 'and', userId);
+
+        // Check if MongoDB is connected
+        if (!isMongoConnected) {
+            console.log('📝 MongoDB not connected, returning empty messages');
+            return res.json({
+                success: true,
+                messages: [],
+                message: 'Database not available'
+            });
+        }
+
+        // Find messages between current user and target user
+        const messages = await Message.find({
+            $or: [
+                { senderId: req.user.userId, receiverId: userId },
+                { senderId: userId, receiverId: req.user.userId }
+            ]
+        }).populate('senderId receiverId', 'firstName lastName email avatar')
+          .sort({ createdAt: 1 }); // Sort by oldest first
+
+        console.log(`Found ${messages.length} messages for conversation`);
+
+        // Format messages for frontend
+        const formattedMessages = messages.map(message => {
+            // Decrypt message content if encrypted
+            let messageContent = message.content;
+            if (message.isEncrypted) {
+                try {
+                    messageContent = decryptMessage(message.content);
+                } catch (decryptError) {
+                    console.error('Failed to decrypt message:', decryptError);
+                    messageContent = '[Tin nhắn đã mã hóa]';
+                }
+            }
+
+            return {
+                id: message._id,
+                senderId: message.senderId._id,
+                senderName: `${message.senderId.firstName} ${message.senderId.lastName}`,
+                senderAvatar: message.senderId.avatar || `https://placehold.co/32x32/4F46E5/FFFFFF?text=${message.senderId.firstName.charAt(0)}`,
+                receiverId: message.receiverId._id,
+                text: messageContent,
+                timestamp: message.createdAt,
+                type: 'text',
+                status: 'sent'
+            };
+        });
+
+        res.json({
+            success: true,
+            messages: formattedMessages
+        });
+
+    } catch (error) {
+        console.error('💥 Get conversation messages error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Lỗi server. Vui lòng thử lại sau!',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 // Create a new post
 app.post('/api/posts', verifyToken, async (req, res) => {
     try {

@@ -13,6 +13,7 @@ class RealTimeMessaging {
         this.initializeWebSocket();
         this.initializeUI();
         this.loadMessageHistory();
+        this.loadConversations(); // Load real conversations from database
         this.updateChatLayout();
         
         // Check for direct message after a short delay to ensure DOM is ready
@@ -189,6 +190,186 @@ class RealTimeMessaging {
         } catch (error) {
             console.error('Error initiating voice call:', error);
             this.showNotification(`Không thể gọi thoại cho ${userName}`, 'error');
+        }
+    }
+
+    async loadConversations() {
+        console.log('=== LOADING REAL CONVERSATIONS ===');
+        const conversationsList = document.getElementById('conversations-list');
+        
+        if (!conversationsList) {
+            console.error('Conversations list element not found');
+            return;
+        }
+
+        try {
+            // Show loading state
+            conversationsList.innerHTML = `
+                <div class="flex items-center justify-center p-8">
+                    <div class="text-gray-400">Đang tải cuộc trò chuyện...</div>
+                </div>
+            `;
+
+            // Fetch conversations from server
+            const response = await fetch('/api/conversations', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Conversations loaded:', data);
+                
+                if (data.conversations && data.conversations.length > 0) {
+                    this.renderConversations(data.conversations);
+                } else {
+                    this.showEmptyConversationsState();
+                }
+            } else {
+                console.error('Failed to load conversations:', response.status);
+                this.showEmptyConversationsState();
+            }
+        } catch (error) {
+            console.error('Error loading conversations:', error);
+            this.showEmptyConversationsState();
+        }
+    }
+
+    renderConversations(conversations) {
+        console.log('Rendering conversations:', conversations.length);
+        const conversationsList = document.getElementById('conversations-list');
+        
+        conversationsList.innerHTML = '';
+        
+        conversations.forEach(conversation => {
+            const conversationItem = document.createElement('div');
+            conversationItem.className = 'conversation-item';
+            conversationItem.setAttribute('data-user-id', conversation.partnerId);
+            
+            // Use otherUser data from server
+            const otherUser = conversation.otherUser;
+            const lastMessage = conversation.lastMessage;
+            const timeStr = lastMessage ? 
+                this.formatMessageTime(new Date(lastMessage.createdAt)) : 
+                'Mới';
+            
+            conversationItem.innerHTML = `
+                <img src="${otherUser.avatar}" 
+                     alt="${otherUser.name}" class="w-12 h-12 rounded-full"/>
+                <div class="flex-1">
+                    <div class="conversation-header">
+                        <h3>${otherUser.name}</h3>
+                        <p class="time">${timeStr}</p>
+                    </div>
+                    <p class="last-message">${lastMessage?.content || 'Bắt đầu cuộc trò chuyện...'}</p>
+                </div>
+            `;
+
+            // Add click handler
+            conversationItem.addEventListener('click', () => {
+                // Remove active state from all items
+                conversationsList.querySelectorAll('.conversation-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                // Add active state to clicked item
+                conversationItem.classList.add('active');
+                
+                // Load conversation with the other user
+                this.loadConversationWithUser(otherUser, conversation.partnerId);
+            });
+
+            conversationsList.appendChild(conversationItem);
+        });
+    }
+
+    showEmptyConversationsState() {
+        const conversationsList = document.getElementById('conversations-list');
+        conversationsList.innerHTML = `
+            <div class="flex flex-col items-center justify-center p-8 text-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mb-4 opacity-50">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <p class="text-sm mb-2">Chưa có cuộc trò chuyện nào</p>
+                <p class="text-xs">Hãy vào Khám phá để tìm bạn bè!</p>
+            </div>
+        `;
+    }
+
+    loadConversationWithUser(otherUser, userId) {
+        console.log('Loading conversation with user:', otherUser.name, userId);
+        this.currentChatId = userId;
+        localStorage.setItem('currentChatId', this.currentChatId);
+        
+        // Show chat window
+        this.showChatWindow();
+        
+        // Update chat header
+        this.updateChatHeaderWithUser(otherUser);
+        
+        // Load messages for this conversation
+        this.loadConversationMessagesFromAPI(userId);
+    }
+
+    async loadConversationMessagesFromAPI(userId) {
+        console.log('Loading messages for conversation with user:', userId);
+        
+        try {
+            const response = await fetch(`/api/conversations/${userId}/messages`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Messages loaded:', data.messages?.length || 0);
+                
+                this.messages = data.messages || [];
+                this.renderAllMessages();
+                this.scrollToBottom();
+                
+                // Enable message input
+                const messageInput = document.getElementById('message-input');
+                if (messageInput) {
+                    messageInput.disabled = false;
+                    messageInput.placeholder = 'Nhập tin nhắn...';
+                }
+            } else {
+                console.error('Failed to load messages:', response.status);
+                this.messages = [];
+                this.renderAllMessages();
+            }
+        } catch (error) {
+            console.error('Error loading messages:', error);
+            this.messages = [];
+            this.renderAllMessages();
+        }
+    }
+
+    formatMessageTime(date) {
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Vừa xong';
+        if (diffMins < 60) return `${diffMins} phút`;
+        if (diffHours < 24) return `${diffHours} giờ`;
+        if (diffDays < 7) return `${diffDays} ngày`;
+        
+        return date.toLocaleDateString('vi-VN');
+    }
+
+    scrollToBottom() {
+        if (this.messageContainer) {
+            setTimeout(() => {
+                this.messageContainer.scrollTop = this.messageContainer.scrollHeight;
+            }, 100);
         }
     }
 
