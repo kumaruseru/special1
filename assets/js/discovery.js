@@ -197,14 +197,20 @@ async function loadSuggestedUsers() {
                 console.log('API calls failed:', error.message);
             }
             
-            // Show login required if all attempts failed
-            console.log('❌ All attempts failed, showing login required');
+            // Auto redirect to login if all attempts failed
+            console.log('❌ All attempts failed, redirecting to login');
+            setTimeout(() => {
+                window.location.href = '../index.html';
+            }, 2000);
             showLoginRequired();
             return;
         }
         
         if (!token) {
-            console.warn('🔒 No authentication token found, showing login required');
+            console.warn('🔒 No authentication token found, redirecting to login');
+            setTimeout(() => {
+                window.location.href = '../index.html';
+            }, 2000);
             showLoginRequired();
             return;
         }
