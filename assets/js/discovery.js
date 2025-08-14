@@ -139,12 +139,24 @@ async function loadSuggestedUsers() {
     try {
         // Check all possible token names (same as shared.js)
         const token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
+        const userName = localStorage.getItem('userName');
+        const userEmail = localStorage.getItem('userEmail');
+        
         console.log('🔍 Discovery: Token check:', { 
             authToken: !!localStorage.getItem('authToken'),
             token: !!localStorage.getItem('token'),
             cosmic_token: !!localStorage.getItem('cosmic_token'),
-            finalToken: !!token
+            finalToken: !!token,
+            userName: userName,
+            userEmail: userEmail
         });
+        
+        // If we have user data but no token, use demo mode
+        if (!token && (userName || userEmail)) {
+            console.log('🔄 No token but have user data - using demo mode');
+            showMockUsers();
+            return;
+        }
         
         if (!token) {
             console.warn('🔒 No authentication token found, showing login required');

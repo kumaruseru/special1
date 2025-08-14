@@ -96,8 +96,16 @@ function checkAuth() {
     // Try all possible token names
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('cosmic_token');
     const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const userName = localStorage.getItem('userName');
+    const userEmail = localStorage.getItem('userEmail');
     
-    console.log('Auth check:', { token: !!token, isLoggedIn });
+    console.log('Auth check:', { 
+        token: !!token, 
+        isLoggedIn,
+        userName,
+        userEmail,
+        hasUserData: !!(userName && userEmail)
+    });
     
     // Sync token to standard 'token' key if found under different name
     if (token && !localStorage.getItem('token')) {
@@ -105,14 +113,22 @@ function checkAuth() {
         console.log('Token synced to standard key');
     }
     
+    // If we have user data but no token, user might be in demo mode
+    if (!token && (userName || userEmail)) {
+        console.log('🔄 User has data but no token - allowing demo mode access');
+        return true; // Allow access for demo/guest users
+    }
+    
     // Check if token exists and is valid
     if (!token) {
-        // Redirect to login if no token at all
-        const currentPath = window.location.pathname;
-        console.log('No token found, current path:', currentPath);
-        if (!currentPath.includes('login.html') && !currentPath.includes('register.html')) {
-            console.log('Redirecting to login...');
-            window.location.href = '/pages/login.html';
+        // Only redirect if we also don't have user data
+        if (!userName && !userEmail) {
+            const currentPath = window.location.pathname;
+            console.log('No token or user data found, current path:', currentPath);
+            if (!currentPath.includes('login.html') && !currentPath.includes('register.html')) {
+                console.log('Redirecting to login...');
+                window.location.href = '/pages/login.html';
+            }
         }
         return false;
     }
@@ -123,16 +139,22 @@ function checkAuth() {
         const isExpired = tokenData.exp && (tokenData.exp * 1000 < Date.now());
         
         if (isExpired) {
-            console.log('Token expired, clearing and redirecting...');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('token');
-            localStorage.removeItem('cosmic_token');
-            localStorage.removeItem('isLoggedIn');
-            window.location.href = '/pages/login.html';
-            return false;
+            console.log('Token expired, but checking if we have user data for demo mode...');
+            if (userName || userEmail) {
+                console.log('🔄 Keeping user in demo mode despite expired token');
+                return true;
+            } else {
+                console.log('Token expired and no user data, clearing and redirecting...');
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('token');
+                localStorage.removeItem('cosmic_token');
+                localStorage.removeItem('isLoggedIn');
+                window.location.href = '/pages/login.html';
+                return false;
+            }
         }
     } catch (e) {
-        console.warn('Token validation failed:', e.message);
+        console.warn('Token validation failed:', e.message, '- allowing access anyway');
         // Don't redirect on token parse error - might be a non-JWT token
     }
     
