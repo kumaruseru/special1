@@ -4,9 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cosmic Social Network - Messages</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Development only - In production, use Tailwind CLI or PostCSS -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cosmic: {
+                            50: '#f0f9ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -271,24 +289,102 @@
 
     <!-- Third-party Libraries -->
     <!-- Using newer Three.js version to avoid deprecation warnings -->
-    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+        <!-- Three.js with ES modules -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        
+        // Make THREE available globally for compatibility
+        window.THREE = THREE;
+        
+        // Cosmic background script
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('cosmic-bg'), alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+
+        // Create stars
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 2, transparent: true, opacity: 0.8 });
+        
+        const starsVertices = [];
+        for (let i = 0; i < 10000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            starsVertices.push(x, y, z);
+        }
+        
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+        
+        camera.position.z = 1;
+        
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', (event) => {
+            mouseX = event.clientX - window.innerWidth / 2;
+            mouseY = event.clientY - window.innerHeight / 2;
+        });
+        
+        const clock = new THREE.Clock();
+        const animate = () => {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+            stars.rotation.y = -mouseX * 0.00005;
+            stars.rotation.x = -mouseY * 0.00005;
+            camera.position.z = 1 + (document.documentElement.scrollTop || document.body.scrollTop) * 0.001;
+            renderer.render(scene, camera);
+        };
+        animate();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" 
+            onerror="console.warn('CryptoJS failed to load, encryption features disabled')"></script>
     
     <!-- Encryption Utilities -->
     <script>
-        // End-to-End Encryption Utilities
+        // End-to-End Encryption Utilities with error handling
         class E2EEncryption {
             // Generate a consistent key for two users
             static generateRoomKey(userId1, userId2) {
-                // Sort IDs to ensure consistent key regardless of order
-                const sortedIds = [userId1, userId2].sort();
-                const combinedId = sortedIds.join('|');
-                // Use SHA256 to create a consistent 256-bit key
-                return CryptoJS.SHA256(combinedId).toString();
+                if (!window.CryptoJS) {
+                    console.warn('CryptoJS not available, using fallback key generation');
+                    return `fallback_${userId1}_${userId2}`.replace(/[^a-zA-Z0-9]/g, '');
+                }
+                
+                try {
+                    // Sort IDs to ensure consistent key regardless of order
+                    const sortedIds = [userId1, userId2].sort();
+                    const combinedId = sortedIds.join('|');
+                    // Use SHA256 to create a consistent 256-bit key
+                    return CryptoJS.SHA256(combinedId).toString();
+                } catch (error) {
+                    console.error('Key generation error:', error);
+                    return `fallback_${userId1}_${userId2}`.replace(/[^a-zA-Z0-9]/g, '');
+                }
             }
             
             // Encrypt message content
             static encryptMessage(plainText, roomKey) {
+                if (!window.CryptoJS) {
+                    console.warn('CryptoJS not available, returning plain text');
+                    return plainText;
+                }
+                
                 try {
                     const encrypted = CryptoJS.AES.encrypt(plainText, roomKey).toString();
                     console.log('Message encrypted successfully');
@@ -301,6 +397,11 @@
             
             // Decrypt message content
             static decryptMessage(encryptedText, roomKey) {
+                if (!window.CryptoJS) {
+                    console.warn('CryptoJS not available, returning encrypted text');
+                    return encryptedText;
+                }
+                
                 try {
                     const decrypted = CryptoJS.AES.decrypt(encryptedText, roomKey);
                     const plainText = decrypted.toString(CryptoJS.enc.Utf8);
