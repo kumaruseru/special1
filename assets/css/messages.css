@@ -460,8 +460,9 @@ main .glass-pane {
 
 /* Handle different message types */
 .message .bg-indigo-600 {
-    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    border: 1px solid rgba(75, 85, 99, 0.3);
+    color: #f3f4f6;
 }
 
 .message .bg-gray-700\/50 {

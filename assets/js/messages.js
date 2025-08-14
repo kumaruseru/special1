@@ -1254,15 +1254,28 @@ class RealTimeMessaging {
         
         // Send through Socket.IO with acknowledgment callback
         if (this.socket && this.isConnected) {
+            console.log('📤 Sending message via Socket.IO:', message);
+            
+            // Set timeout for acknowledgment
+            const timeoutId = setTimeout(() => {
+                console.warn('⏰ Message send timeout, marking as sent anyway');
+                this.updateMessageStatus(messageId, 'sent');
+            }, 5000); // 5 second timeout
+            
             this.socket.emit('telegram_message', message, (acknowledgment) => {
+                clearTimeout(timeoutId);
+                console.log('📨 Message acknowledgment received:', acknowledgment);
+                
                 if (acknowledgment && acknowledgment.success) {
                     this.updateMessageStatus(messageId, 'sent');
                 } else {
+                    console.error('❌ Message send failed:', acknowledgment);
                     this.updateMessageStatus(messageId, 'failed');
                     this.showRetryOption(messageId, message);
                 }
             });
         } else {
+            console.log('📻 Fallback: Using BroadcastChannel for message');
             // Fallback: Use BroadcastChannel
             this.broadcastMessage({
                 type: 'message',
