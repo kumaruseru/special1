@@ -1003,6 +1003,27 @@ class RealTimeMessaging {
                 });
             });
 
+            // Join chat responses
+            this.socket.on('join_success', (data) => {
+                console.log('✅ Successfully joined chat:', data.message);
+            });
+
+            this.socket.on('join_error', (data) => {
+                console.error('❌ Join chat failed:', data.error);
+                this.showNotification('Không thể tham gia chat: ' + data.error, 'error');
+            });
+
+            // Message responses
+            this.socket.on('message_sent', (data) => {
+                console.log('✅ Message sent confirmation:', data);
+                this.updateMessageStatus(data.messageId, 'sent');
+            });
+
+            this.socket.on('message_error', (data) => {
+                console.error('❌ Message send failed:', data.error);
+                this.showNotification('Không thể gửi tin nhắn: ' + data.error, 'error');
+            });
+
             // Real-time message events
             this.socket.on('new_message', (data) => {
                 console.log('📨 Received real-time message:', data);
@@ -1547,21 +1568,35 @@ class RealTimeMessaging {
         oscillator.stop(audioContext.currentTime + 0.3);
     }
 
-    updateConnectionStatus(isConnected) {
+    updateConnectionStatus(isConnected, statusText = null) {
         const statusElement = document.getElementById('connection-status');
         if (statusElement) {
-            if (isConnected) {
+            if (statusText) {
+                // Custom status text provided
+                statusElement.textContent = statusText;
+                statusElement.className = 'text-xs text-red-400';
+            } else if (isConnected) {
                 const onlineCount = this.onlineUsers.size + 1;
                 if (onlineCount <= 1) {
-                    statusElement.textContent = 'Trống';
-                    statusElement.className = 'text-xs text-gray-400';
+                    statusElement.textContent = 'Trực tuyến';
+                    statusElement.className = 'text-xs text-green-400';
                 } else {
                     statusElement.textContent = `${onlineCount} người trực tuyến`;
                     statusElement.className = 'text-xs text-green-400';
                 }
             } else {
-                statusElement.textContent = 'Đang kết nối...';
-                statusElement.className = 'text-xs text-yellow-400';
+                // Show different messages based on connection attempts
+                const attempts = this.connectionAttempts || 0;
+                if (attempts === 0) {
+                    statusElement.textContent = 'Đang kết nối...';
+                    statusElement.className = 'text-xs text-yellow-400';
+                } else if (attempts < 3) {
+                    statusElement.textContent = `Thử lại... (${attempts}/5)`;
+                    statusElement.className = 'text-xs text-orange-400';
+                } else {
+                    statusElement.textContent = 'Kết nối không ổn định';
+                    statusElement.className = 'text-xs text-red-400';
+                }
             }
         }
     }
