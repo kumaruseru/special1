@@ -177,19 +177,34 @@ function checkAuth() {
 // Try to refresh token using available user data
 async function tryRefreshToken(email, userName) {
     try {
+        console.log('🔄 tryRefreshToken called with:', { email, userName });
+        
+        // If no email provided, try to get from localStorage
         if (!email) {
-            console.log('No email available for token refresh');
+            email = localStorage.getItem('userEmail') || localStorage.getItem('email');
+            console.log('🔍 Getting email from localStorage:', email);
+            console.log('🔍 All localStorage keys:', Object.keys(localStorage));
+        }
+        
+        // Also try to get userId for backup
+        const userId = localStorage.getItem('userId');
+        
+        if (!email && !userId) {
+            console.log('No email or userId available for token refresh');
             return false;
         }
 
-        console.log('🔄 Attempting token refresh for:', email);
+        console.log('🔄 Attempting token refresh for:', email || `userId: ${userId}`);
         
         const response = await fetch('/api/refresh-token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ 
+                email: email,
+                userId: userId 
+            })
         });
 
         if (!response.ok) {
