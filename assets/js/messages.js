@@ -1265,18 +1265,29 @@ class RealTimeMessaging {
             const timeoutId = setTimeout(() => {
                 console.warn('⏰ Message send timeout, marking as sent anyway');
                 this.updateMessageStatus(messageId, 'sent');
-            }, 5000); // 5 second timeout
+            }, 10000); // Increased to 10 second timeout
             
-            this.socket.emit('telegram_message', message, (acknowledgment) => {
+            // Use correct event name that server expects
+            this.socket.emit('send_message', {
+                messageId: messageId,
+                text: message.text,
+                timestamp: message.timestamp,
+                chatId: 'global_chat', // Default chat room
+                recipientId: message.recipientId
+            }, (acknowledgment) => {
                 clearTimeout(timeoutId);
                 console.log('📨 Message acknowledgment received:', acknowledgment);
                 
                 if (acknowledgment && acknowledgment.success) {
                     this.updateMessageStatus(messageId, 'sent');
-                } else {
-                    console.error('❌ Message send failed:', acknowledgment);
+                } else if (acknowledgment && acknowledgment.error) {
+                    console.error('❌ Message send failed:', acknowledgment.error);
                     this.updateMessageStatus(messageId, 'failed');
                     this.showRetryOption(messageId, message);
+                } else {
+                    // No acknowledgment or unclear response
+                    console.warn('⚠️ Unclear acknowledgment, marking as sent');
+                    this.updateMessageStatus(messageId, 'sent');
                 }
             });
         } else {

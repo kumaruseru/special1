@@ -2275,7 +2275,7 @@ io.on('connection', (socket) => {
             }
             
             if (!socket.userId) {
-                const error = { error: 'User not authenticated for chat', code: 401 };
+                const error = { success: false, error: 'User not authenticated for chat', code: 401 };
                 console.error('❌ Message rejected: User not authenticated');
                 if (callback) callback(error);
                 socket.emit('message_error', error);
@@ -2283,7 +2283,7 @@ io.on('connection', (socket) => {
             }
             
             if (!text || text.trim() === '') {
-                const error = { error: 'Message text cannot be empty', code: 400 };
+                const error = { success: false, error: 'Message text cannot be empty', code: 400 };
                 console.error('❌ Message rejected: Empty text');
                 if (callback) callback(error);
                 socket.emit('message_error', error);
@@ -2330,13 +2330,14 @@ io.on('connection', (socket) => {
             
             // Immediate confirmation to sender (Telegram-style)
             const confirmation = {
+                success: true,
                 messageId: telegramMessage.id,
                 status: 'sent',
                 timestamp: Date.now(),
                 deliveredCount: telegramMessage.deliveredTo.size
             };
             
-            if (callback) callback(null, confirmation);
+            if (callback) callback(confirmation);
             socket.emit('message_sent', confirmation);
             
             // Set timeout for delivery confirmation
@@ -2354,7 +2355,7 @@ io.on('connection', (socket) => {
             
         } catch (error) {
             console.error('Error in Telegram-style send_message:', error);
-            const errorResponse = { error: error.message, code: 500 };
+            const errorResponse = { success: false, error: error.message, code: 500 };
             if (callback) callback(errorResponse);
             socket.emit('message_error', errorResponse);
             
