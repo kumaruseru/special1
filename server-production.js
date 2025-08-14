@@ -1281,8 +1281,13 @@ app.post('/api/refresh-token', async (req, res) => {
             });
         }
 
+        const db = mongoConnection.db();
+        const usersCollection = db.collection('users');
+
         // Find user by email or ID
-        const user = await User.findOne(userId ? { _id: userId } : { email });
+        const user = userId ? 
+            await usersCollection.findOne({ _id: new ObjectId(userId) }) :
+            await usersCollection.findOne({ email: email });
         
         if (!user) {
             return res.status(404).json({
@@ -1293,7 +1298,7 @@ app.post('/api/refresh-token', async (req, res) => {
 
         // Generate new token
         const token = jwt.sign(
-            { userId: user._id, email: user.email },
+            { userId: user._id.toString(), email: user.email },
             process.env.JWT_SECRET || 'cosmic-social-secret-2024',
             { expiresIn: '30d' }
         );
@@ -1308,7 +1313,9 @@ app.post('/api/refresh-token', async (req, res) => {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
-                fullName: user.fullName || `${user.firstName} ${user.lastName}`
+                name: user.name || `${user.firstName} ${user.lastName}`.trim(),
+                username: user.username,
+                avatar: user.avatar
             },
             message: 'Token refreshed successfully'
         });
