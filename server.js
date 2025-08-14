@@ -2728,6 +2728,92 @@ app.post('/api/refresh-token', async (req, res) => {
     }
 });
 
+// === AUTHENTICATION ENDPOINTS ===
+// Register endpoint (for testing)
+app.post('/api/register', async (req, res) => {
+    try {
+        const { name, email, password, username } = req.body;
+        
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Name, email and password are required'
+            });
+        }
+
+        if (!mongoConnection) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        const db = mongoConnection.db();
+        const usersCollection = db.collection('users');
+
+        // Check if user exists
+        const existingUser = await usersCollection.findOne({ email: email });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'User already exists'
+            });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // Create user
+        const newUser = {
+            name: name,
+            email: email,
+            username: username || name.toLowerCase().replace(/\s+/g, ''),
+            password: hashedPassword,
+            avatar: `https://placehold.co/100x100/4F46E5/FFFFFF?text=${name[0].toUpperCase()}`,
+            createdAt: new Date(),
+            isVerified: false
+        };
+
+        const result = await usersCollection.insertOne(newUser);
+
+        // Generate token
+        const tokenPayload = {
+            userId: result.insertedId.toString(),
+            email: newUser.email,
+            username: newUser.username
+        };
+
+        const token = jwt.sign(
+            tokenPayload,
+            process.env.JWT_SECRET || 'cosmic_secret_key_2024',
+            { expiresIn: '7d' }
+        );
+
+        console.log('✅ User registered:', newUser.email);
+
+        res.status(201).json({
+            success: true,
+            message: 'User registered successfully',
+            token: token,
+            user: {
+                id: result.insertedId.toString(),
+                name: newUser.name,
+                email: newUser.email,
+                username: newUser.username,
+                avatar: newUser.avatar
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Registration error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Registration failed',
+            error: error.message
+        });
+    }
+});
+
 // === API ENDPOINTS ===
 // Get users endpoint
 app.get('/api/users', async (req, res) => {
