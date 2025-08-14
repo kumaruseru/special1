@@ -2,51 +2,6 @@ body {
     font-family: 'Inter', sans-serif;
     background: #090a0f;
     color: #E5E7EB; /* gray-200 */
-    overflow: hidden; /* Completely hide all scrollbars */
-    width: 100vw;
-    max-width: 100vw;
-    height: 100vh;
-    max-height: 100vh;
-}
-
-html {
-    overflow: hidden; /* Completely hide all scrollbars */
-    width: 100vw;
-    max-width: 100vw;
-    height: 100vh;
-    max-height: 100vh;
-}
-
-/* Force hide ALL scrollbars and prevent any overflow */
-* {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-    overflow-x: hidden !important;
-}
-
-*::-webkit-scrollbar {
-    display: none !important;
-    width: 0px !important;
-    height: 0px !important;
-    background: transparent !important;
-}
-
-/* Override any Tailwind or other scrollbar styles */
-.overflow-auto, .overflow-y-auto, .overflow-x-auto {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-}
-
-.overflow-auto::-webkit-scrollbar, 
-.overflow-y-auto::-webkit-scrollbar, 
-.overflow-x-auto::-webkit-scrollbar {
-    display: none !important;
-}
-
-/* Ensure no element causes horizontal overflow */
-.container, .glass-pane, main, div {
-    max-width: 100%;
-    box-sizing: border-box;
 }
 #cosmic-bg {
     position: fixed;
@@ -100,6 +55,158 @@ main .glass-pane {
 
 .hidden {
     display: none;
+}
+
+/* Conversation Item Styles */
+.conversation-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid rgba(75, 85, 99, 0.2);
+}
+
+.conversation-item:hover {
+    background-color: rgba(75, 85, 99, 0.3);
+}
+
+.conversation-item.active {
+    background-color: rgba(79, 70, 229, 0.2);
+}
+
+.conversation-item img {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.conversation-item .flex-1 {
+    flex: 1;
+    min-width: 0;
+}
+
+.conversation-item .conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.conversation-item h3 {
+    font-weight: 700;
+    color: white;
+    font-size: 1rem;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversation-item .time {
+    font-size: 0.75rem;
+    color: #9CA3AF;
+    white-space: nowrap;
+}
+
+.conversation-item .last-message {
+    font-size: 0.875rem;
+    color: #9CA3AF;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.conversation-item.active .last-message {
+    color: #D1D5DB;
+}
+
+/* Message styles */
+.message {
+    margin-bottom: 1rem;
+    padding: 0 1rem;
+}
+
+.message.own {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.message.other {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.message-bubble {
+    max-width: 20rem;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+.message.own .message-bubble {
+    background: #4F46E5;
+    color: white;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.message.other .message-bubble {
+    background: rgba(75, 85, 99, 0.5);
+    color: white;
+    border-top-left-radius: 0.25rem;
+}
+
+.message.other img {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Animation for new messages */
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message {
+    animation: messageSlideIn 0.3s ease-out;
+}
+
+/* Navigation Link Styles */
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #E5E7EB;
+    text-decoration: none;
+}
+
+.nav-link:hover {
+    background-color: rgba(75, 85, 99, 0.3);
+    color: #F3F4F6;
+}
+
+.nav-link.active {
+    background-color: rgba(79, 70, 229, 0.2);
+    color: #FFFFFF;
+    font-weight: 600;
 }
 
 /* Real-time Messaging Styles */

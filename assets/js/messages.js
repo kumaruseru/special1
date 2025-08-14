@@ -210,6 +210,9 @@ class RealTimeMessaging {
     showConversationPlaceholder(user) {
         console.log('Showing conversation placeholder for user:', user.name);
         
+        // Add user to conversation list if not already there
+        this.addUserToConversationList(user);
+        
         // Show the chat window first
         this.showChatWindow();
         
@@ -237,7 +240,7 @@ class RealTimeMessaging {
         }
 
         // Enable message input
-        const messageInput = document.querySelector('.message-input');
+        const messageInput = document.querySelector('.message-input') || document.getElementById('message-input');
         if (messageInput) {
             messageInput.disabled = false;
             messageInput.placeholder = `Nhắn tin cho ${user.name}...`;
@@ -245,6 +248,61 @@ class RealTimeMessaging {
         } else {
             console.error('Message input not found!');
         }
+    }
+
+    addUserToConversationList(user) {
+        console.log('Adding user to conversation list:', user.name);
+        const conversationsList = document.getElementById('conversations-list');
+        
+        if (!conversationsList) {
+            console.error('Conversations list not found');
+            return;
+        }
+
+        // Check if user already exists in list
+        const existingItem = conversationsList.querySelector(`[data-user-id="${user.id}"]`);
+        if (existingItem) {
+            // Mark as active
+            conversationsList.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            existingItem.classList.add('active');
+            return;
+        }
+
+        // Create new conversation item with beautiful style
+        const conversationItem = document.createElement('div');
+        conversationItem.className = 'conversation-item';
+        conversationItem.setAttribute('data-user-id', user.id);
+        
+        conversationItem.innerHTML = `
+            <img src="${user.avatar || 'https://placehold.co/48x48/8A2BE2/FFFFFF?text=' + (user.name ? user.name.charAt(0) : 'U')}" 
+                 alt="${user.name}" class="w-12 h-12 rounded-full"/>
+            <div class="flex-1">
+                <div class="conversation-header">
+                    <h3>${user.name}</h3>
+                    <p class="time">Vừa xong</p>
+                </div>
+                <p class="last-message">Bắt đầu cuộc trò chuyện...</p>
+            </div>
+        `;
+
+        // Add click handler
+        conversationItem.addEventListener('click', () => {
+            // Remove active state from all items
+            conversationsList.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            // Add active state to clicked item
+            conversationItem.classList.add('active');
+            
+            // Start conversation
+            this.showConversationPlaceholder(user);
+        });
+
+        // Add to list and mark as active
+        conversationsList.appendChild(conversationItem);
+        conversationItem.classList.add('active');
     }
 
     showChatWindow() {
@@ -665,8 +723,14 @@ class RealTimeMessaging {
     initializeUI() {
         // Get message elements
         this.messageContainer = document.getElementById('messages-container');
-        this.messageInput = document.querySelector('.message-input');
-        this.sendButton = document.querySelector('.send-button');
+        this.messageInput = document.getElementById('message-input') || document.querySelector('.message-input');
+        this.sendButton = document.getElementById('send-button') || document.querySelector('.send-button');
+        
+        console.log('UI Elements initialized:', {
+            messageContainer: !!this.messageContainer,
+            messageInput: !!this.messageInput,
+            sendButton: !!this.sendButton
+        });
         
         // Disable message input by default (until a conversation is selected)
         if (this.messageInput) {
@@ -857,28 +921,26 @@ class RealTimeMessaging {
                 </div>
             `;
         } else {
-            messageElement.className = `message ${isOwn ? 'message-own' : 'message-other'}`;
+            messageElement.className = `message ${isOwn ? 'own' : 'other'}`;
             messageElement.setAttribute('data-message-id', message.id);
 
-            messageElement.innerHTML = `
-                <div class="flex ${isOwn ? 'justify-end' : 'justify-start'} items-start gap-3">
-                    ${!isOwn ? `<img src="${message.senderAvatar}" alt="${message.senderName}" class="w-8 h-8 rounded-full object-cover">` : ''}
-                    
-                    <div class="max-w-xs lg:max-w-md ${isOwn ? 'order-first' : 'order-last'}">
-                        ${!isOwn ? `<div class="text-xs text-gray-400 mb-1 px-2">${this.escapeHtml(message.senderName)}</div>` : ''}
-                        <div class="${isOwn ? 'bg-indigo-600 text-white' : 'bg-gray-700/50 text-gray-100'} rounded-lg p-3 shadow-sm ${message.text.length > 200 ? 'message-long' : ''}">
-                            <p class="break-words">${this.escapeHtml(message.text)}</p>
-                        </div>
-                        
-                        <div class="flex items-center gap-1 mt-1 px-2 text-xs text-gray-400">
-                            <span>${timeStr}</span>
-                            ${isOwn && message.status ? `<span class="ml-1 message-status" data-status="${message.status}">${this.getStatusIcon(message.status)}</span>` : ''}
-                        </div>
+            if (isOwn) {
+                // User's own messages - align right
+                messageElement.innerHTML = `
+                    <div class="message-bubble">
+                        <p>${this.escapeHtml(message.text)}</p>
                     </div>
-                    
-                    ${isOwn ? `<img src="${message.senderAvatar}" alt="${message.senderName}" class="w-8 h-8 rounded-full object-cover">` : ''}
-                </div>
-            `;
+                `;
+            } else {
+                // Other user's messages - align left with avatar
+                messageElement.innerHTML = `
+                    <img src="${message.senderAvatar || 'https://placehold.co/32x32/8A2BE2/FFFFFF?text=' + (message.senderName ? message.senderName.charAt(0) : 'U')}" 
+                         alt="${message.senderName}" class="w-8 h-8 rounded-full"/>
+                    <div class="message-bubble">
+                        <p>${this.escapeHtml(message.text)}</p>
+                    </div>
+                `;
+            }
         }
 
         // Add with animation
