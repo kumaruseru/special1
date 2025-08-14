@@ -1368,18 +1368,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Health check route for Render
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        mongodb: mongoConnection ? 'Connected' : 'Disconnected',
-        socketio: 'Active',
-        environment: process.env.NODE_ENV || 'development'
-    });
-});
-
 // Catch all other routes and serve index.html (for SPA)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
