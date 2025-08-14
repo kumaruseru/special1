@@ -1037,14 +1037,26 @@ app.get('*', (req, res) => {
 
 // Initialize database and start server
 async function startServer() {
-    await initializeDatabase();
+    console.log('🚀 Starting Cosmic Social Network server...');
+    console.log('📍 Node version:', process.version);
+    console.log('📍 Environment:', process.env.NODE_ENV || 'development');
+    console.log('📍 Port:', PORT);
     
-    server.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Cosmic Social Network server running on port ${PORT}`);
-        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`🔗 Health Check: http://localhost:${PORT}/health`);
-        console.log(`🔌 WebRTC signaling server ready`);
-    });
+    try {
+        await initializeDatabase();
+        console.log('✅ Database initialization complete');
+        
+        server.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Cosmic Social Network server running on port ${PORT}`);
+            console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`🔗 Health Check: http://localhost:${PORT}/health`);
+            console.log(`🔌 WebRTC signaling server ready`);
+            console.log('✅ Server startup complete');
+        });
+    } catch (error) {
+        console.error('💥 Server startup failed:', error);
+        process.exit(1);
+    }
 }
 
 // Graceful shutdown
