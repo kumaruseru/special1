@@ -2148,13 +2148,22 @@ io.on('connection', (socket) => {
             }
 
             // Verify JWT token
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cosmic-social-secret-2024');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cosmic_secret_key_2024');
             const userId = decoded.userId || decoded.id;
             
             console.log('✅ Token decoded, userId:', userId);
             
-            // Find user in database
-            const user = await User.findById(userId);
+            if (!mongoConnection) {
+                console.log('❌ Database not available');
+                socket.emit('authentication_failed', { error: 'Database not available' });
+                return;
+            }
+            
+            // Find user in database using native MongoDB client
+            const db = mongoConnection.db();
+            const usersCollection = db.collection('users');
+            const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+            
             if (!user) {
                 console.log('❌ User not found in database:', userId);
                 socket.emit('authentication_failed', { error: 'User not found' });
@@ -2386,45 +2395,6 @@ io.on('connection', (socket) => {
     });
 
     // === WebRTC Authentication & Calls ===
-
-    // User authentication for WebRTC
-    socket.on('authenticate', (data) => {
-        const { token } = data;
-        try {
-            const decoded = jwt.verify(token, JWT_SECRET);
-            socket.userId = decoded.userId;
-            socket.username = decoded.username;
-            socket.isAuthenticated = true;
-            
-            // Update in activeUsers map for both messaging and calling
-            activeUsers.set(decoded.userId, { 
-                socketId: socket.id, 
-                username: socket.username,
-                avatar: socket.avatar || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${decoded.firstName?.charAt(0) || 'U'}${decoded.lastName?.charAt(0) || ''}`,
-                isAuthenticated: true 
-            });
-            
-            // Join chat room for authenticated users
-            socket.join('global_chat');
-            
-            socket.emit('authenticated', { 
-                userId: decoded.userId, 
-                username: decoded.username 
-            });
-            
-            // Notify others about authenticated user
-            socket.to('global_chat').emit('user_joined', {
-                userId: decoded.userId,
-                username: socket.username,
-                avatar: socket.avatar,
-                isAuthenticated: true
-            });
-            
-            console.log(`✅ User authenticated for chat & WebRTC: ${decoded.username} (${decoded.userId})`);
-        } catch (error) {
-            socket.emit('authentication_failed', { error: 'Invalid token' });
-        }
-    });
 
     // Initiate a call
     socket.on('initiate_call', (data) => {
