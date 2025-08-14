@@ -645,10 +645,15 @@ class RealTimeMessaging {
     }
 
     initializeUI() {
-        // Get message elements
+        // Get message elements with proper selectors
         this.messageContainer = document.getElementById('messages-container');
-        this.messageInput = document.querySelector('.message-input');
-        this.sendButton = document.querySelector('.send-button');
+        this.messageInput = document.getElementById('message-input');
+        this.sendButton = document.getElementById('send-button');
+        
+        console.log('🔍 UI Elements Found:');
+        console.log('- Message Container:', !!this.messageContainer);
+        console.log('- Message Input:', !!this.messageInput);
+        console.log('- Send Button:', !!this.sendButton);
         
         // Disable message input by default (until a conversation is selected)
         if (this.messageInput) {
@@ -656,9 +661,27 @@ class RealTimeMessaging {
             this.messageInput.placeholder = 'Chọn một cuộc trò chuyện để bắt đầu...';
         }
         
-        // Add event listeners
+        // Add event listeners for send button
         if (this.sendButton) {
-            this.sendButton.addEventListener('click', () => this.sendMessage());
+            this.sendButton.addEventListener('click', () => {
+                console.log('📤 Send button clicked');
+                this.sendMessage();
+            });
+            console.log('✅ Send button event listener added');
+        } else {
+            console.error('❌ Send button not found');
+        }
+
+        // Add Enter key listener for message input
+        if (this.messageInput) {
+            this.messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    console.log('📤 Enter key pressed');
+                    this.sendMessage();
+                }
+            });
+            console.log('✅ Message input Enter key listener added');
         }
 
         // Add clear chat button listener
