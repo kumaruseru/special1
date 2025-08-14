@@ -750,30 +750,71 @@ class RealTimeMessaging {
     }
 
     getCurrentUser() {
-        // Get current user from localStorage or create new one
+        console.log('=== GET CURRENT USER ===');
+        
+        // Try to get authenticated user from token first
+        try {
+            const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+            const userInfo = localStorage.getItem('userInfo');
+            
+            console.log('Token exists:', !!token);
+            console.log('UserInfo exists:', !!userInfo);
+            
+            if (token && userInfo) {
+                const parsedUserInfo = JSON.parse(userInfo);
+                console.log('Using authenticated user from userInfo:', parsedUserInfo);
+                
+                // Create standardized user object
+                const user = {
+                    id: parsedUserInfo._id || parsedUserInfo.id,
+                    name: parsedUserInfo.name || parsedUserInfo.fullName || parsedUserInfo.username,
+                    username: parsedUserInfo.username || parsedUserInfo.name,
+                    email: parsedUserInfo.email,
+                    avatar: parsedUserInfo.avatar || parsedUserInfo.profilePicture || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${(parsedUserInfo.name || 'U').charAt(0).toUpperCase()}`,
+                    joinedAt: parsedUserInfo.createdAt || Date.now()
+                };
+                
+                console.log('Standardized user object:', user);
+                return user;
+            }
+        } catch (error) {
+            console.error('Error parsing userInfo:', error);
+        }
+        
+        // Fallback: Check for existing currentUser in localStorage
         let userData = localStorage.getItem('currentUser');
         if (userData) {
-            const user = JSON.parse(userData);
-            // Check if it's a mock user and reset
-            if (user.name.startsWith('Người dùng ') && user.name.includes('user_')) {
+            try {
+                const user = JSON.parse(userData);
+                console.log('Using currentUser from localStorage:', user);
+                
+                // Check if it's a temporary user and needs to be updated
+                if (user.id && !user.id.startsWith('user_')) {
+                    return user; // Real user
+                } else {
+                    console.log('Found temporary user, will need to authenticate properly');
+                    // Don't clear it yet, let the user authenticate first
+                    return user;
+                }
+            } catch (error) {
+                console.error('Error parsing currentUser:', error);
                 localStorage.removeItem('currentUser');
-                userData = null;
-            } else {
-                return user;
             }
         }
         
-        // Create new user - let them authenticate with the real system
-        const userName = prompt('Nhập tên của bạn:') || 'Anonymous';
-        const userId = 'user_' + Date.now(); // Use timestamp for unique ID
+        // Last resort: Create temporary user (for development/testing)
+        console.warn('No authenticated user found, creating temporary user');
+        const userName = 'Guest User';
+        const userId = 'guest_' + Date.now();
         const user = {
             id: userId,
             name: userName,
-            avatar: `https://placehold.co/40x40/${this.getRandomColor()}/FFFFFF?text=${userName.charAt(0).toUpperCase()}`,
+            avatar: `https://placehold.co/40x40/${this.getRandomColor()}/FFFFFF?text=G`,
             joinedAt: Date.now()
         };
         
         localStorage.setItem('currentUser', JSON.stringify(user));
+        console.log('Created temporary user:', user);
         return user;
     }
 
