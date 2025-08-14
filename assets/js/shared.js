@@ -56,16 +56,37 @@ function checkAuth() {
         console.log('Token synced to standard key');
     }
     
-    if (!token || isLoggedIn !== 'true') {
-        // Redirect to login if not authenticated
+    // Check if token exists and is valid
+    if (!token) {
+        // Redirect to login if no token at all
         const currentPath = window.location.pathname;
-        console.log('Not authenticated, current path:', currentPath);
+        console.log('No token found, current path:', currentPath);
         if (!currentPath.includes('login.html') && !currentPath.includes('register.html')) {
             console.log('Redirecting to login...');
             window.location.href = '/pages/login.html';
         }
         return false;
     }
+    
+    // If we have a token, check if it's expired
+    try {
+        const tokenData = JSON.parse(atob(token.split('.')[1]));
+        const isExpired = tokenData.exp && (tokenData.exp * 1000 < Date.now());
+        
+        if (isExpired) {
+            console.log('Token expired, clearing and redirecting...');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('token');
+            localStorage.removeItem('cosmic_token');
+            localStorage.removeItem('isLoggedIn');
+            window.location.href = '/pages/login.html';
+            return false;
+        }
+    } catch (e) {
+        console.warn('Token validation failed:', e.message);
+        // Don't redirect on token parse error - might be a non-JWT token
+    }
+    
     console.log('Authentication successful');
     return true;
 }
@@ -100,15 +121,27 @@ document.addEventListener('DOMContentLoaded', function() {
         userData: localStorage.getItem('userData')
     });
     
-    // Check authentication first
-    if (checkAuth()) {
-        // Load user info
-        loadUserInfo();
-        
-        // Add logout event listener
-        const logoutButton = document.querySelector('.logout-button');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', logout);
+    // Check if we should skip auth check for certain pages
+    const currentPath = window.location.pathname;
+    const skipAuthPages = ['discovery.html'];
+    const shouldSkipAuth = skipAuthPages.some(page => currentPath.includes(page));
+    
+    if (!shouldSkipAuth) {
+        // Check authentication for protected pages
+        if (checkAuth()) {
+            // Load user info
+            loadUserInfo();
         }
+    } else {
+        console.log('Skipping auth check for:', currentPath);
+        // Still load user info if available for guest mode
+        loadUserInfo();
+    }
+    
+    // Add logout event listener
+    const logoutButton = document.querySelector('.logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', logout);
+    }
     }
 });
