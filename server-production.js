@@ -634,29 +634,47 @@ const User = mongoose.model('User', userSchema);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+    console.log('Health check accessed at:', new Date().toISOString());
     res.json({
         status: 'OK',
         timestamp: new Date().toISOString(),
         database: mongoConnection ? 'Connected' : 'Disconnected',
         uptime: process.uptime(),
-        environment: process.env.NODE_ENV || 'development'
+        environment: process.env.NODE_ENV || 'development',
+        port: PORT,
+        message: 'Server is running'
     });
 });
 
 // Database status endpoint
 app.get('/api/database-status', (req, res) => {
+    console.log('Database status endpoint accessed');
     res.json({
         mongodb: mongoConnection ? 'Connected' : 'Disconnected',
-        environment: process.env.NODE_ENV || 'development'
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Simple test endpoint
+app.get('/api/test', (req, res) => {
+    console.log('API test endpoint accessed');
+    res.json({ 
+        message: 'API is working',
+        server: 'production',
+        timestamp: new Date().toISOString() 
     });
 });
 
 // Get user salt endpoint
 app.post('/api/get-salt', async (req, res) => {
+    console.log('Get salt endpoint accessed:', req.body);
+    
     try {
         const { email } = req.body;
 
         if (!email) {
+            console.log('No email provided in get-salt request');
             return res.status(400).json({
                 success: false,
                 message: 'Email is required!'
@@ -664,6 +682,7 @@ app.post('/api/get-salt', async (req, res) => {
         }
 
         if (!mongoConnection) {
+            console.log('Database not available for get-salt request');
             return res.status(503).json({
                 success: false,
                 message: 'Database not available'
