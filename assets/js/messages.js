@@ -1986,40 +1986,65 @@ async function loadRealConversationsLegacy() {
 }
 
 window.renderConversations = function(conversations) {
+    console.log('🎨 Rendering conversations:', conversations);
     const conversationsList = document.getElementById('conversations-list');
-    if (!conversationsList) return;
+    if (!conversationsList) {
+        console.error('❌ conversations-list element not found');
+        return;
+    }
+
+    if (!conversations || conversations.length === 0) {
+        console.log('📭 No conversations to render');
+        window.showEmptyConversationsState();
+        return;
+    }
 
     const conversationsHTML = conversations.map(conv => {
-        const otherUser = conv.participants?.find(p => p.id !== window.realTimeMessaging?.currentUser?.id);
-        if (!otherUser) return '';
+        // Handle both API format and demo format
+        const otherUser = conv.participants?.find(p => p.id !== window.realTimeMessaging?.currentUser?.id) || {
+            name: conv.name,
+            avatar: conv.avatar,
+            online: conv.isOnline
+        };
+        
+        const userName = otherUser.name || otherUser.username || conv.name || 'Unknown User';
+        const userAvatar = otherUser.avatar || conv.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
+        const lastMessage = conv.lastMessage || 'Chưa có tin nhắn';
+        const timestamp = conv.lastMessageTime || conv.timestamp;
+        const isOnline = otherUser.online || conv.isOnline || false;
+        const unreadCount = conv.unreadCount || 0;
+        
+        const timeString = timestamp ? new Date(timestamp).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'}) : '';
 
         return `
             <div class="conversation-item ${conv.id === (window.realTimeMessaging?.currentChatId || '') ? 'active' : ''}" 
                  data-conversation-id="${conv.id}" 
-                 onclick="window.selectConversation('${conv.id}', '${otherUser.name || otherUser.username}', '${otherUser.avatar || ''}')">
-                <div class="flex items-center gap-4 p-4 hover:bg-gray-800/50 cursor-pointer transition-colors">
+                 onclick="window.selectConversation('${conv.id}', '${userName}', '${userAvatar}')">
+                <div class="flex items-center gap-4 p-4 hover:bg-gray-800/50 cursor-pointer transition-colors border-b border-gray-700/30">
                     <div class="relative">
-                        <img src="${otherUser.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${(otherUser.name || otherUser.username || 'U').charAt(0).toUpperCase()}`}" 
-                             alt="${otherUser.name || otherUser.username}" 
-                             class="w-12 h-12 rounded-full" />
-                        ${otherUser.online ? '<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-gray-800 rounded-full"></div>' : ''}
+                        <img src="${userAvatar}" 
+                             alt="${userName}" 
+                             class="w-12 h-12 rounded-full object-cover" 
+                             onerror="this.src='https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}'" />
+                        ${isOnline ? '<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-gray-800 rounded-full"></div>' : ''}
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-1">
-                            <h3 class="font-bold text-white truncate">${otherUser.name || otherUser.username}</h3>
-                            <span class="text-xs text-gray-400">${conv.lastMessageTime ? new Date(conv.lastMessageTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'}) : ''}</span>
+                            <h3 class="font-bold text-white truncate">${userName}</h3>
+                            <span class="text-xs text-gray-400">${timeString}</span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <p class="text-sm text-gray-400 truncate">${conv.lastMessage || 'Chưa có tin nhắn'}</p>
-                            ${conv.unreadCount > 0 ? `<span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full ml-2">${conv.unreadCount}</span>` : ''}
+                            <p class="text-sm text-gray-400 truncate">${lastMessage}</p>
+                            ${unreadCount > 0 ? `<span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full ml-2 flex-shrink-0">${unreadCount}</span>` : ''}
                         </div>
                     </div>
                 </div>
             </div>
         `;
-    }).filter(html => html).join('');
+    }).join('');
 
     conversationsList.innerHTML = conversationsHTML;
+    console.log('✅ Conversations rendered successfully');
 };
 
 window.showEmptyConversationsState = function() {
@@ -2027,18 +2052,61 @@ window.showEmptyConversationsState = function() {
     if (!conversationsList) return;
 
     conversationsList.innerHTML = `
-        <div class="p-8 text-center text-gray-400">
+        <div class="p-6 text-center text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 opacity-50">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
             </svg>
             <h3 class="font-semibold text-white mb-2">Chưa có cuộc trò chuyện nào</h3>
-            <p class="text-sm">Bắt đầu cuộc trò chuyện mới từ trang Khám phá</p>
-            <button onclick="window.location.href='discovery.html'" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                Khám phá bạn bè
-            </button>
+            <p class="text-sm mb-4">Bắt đầu cuộc trò chuyện mới từ trang Khám phá</p>
+            <div class="space-y-2">
+                <button onclick="window.location.href='discovery.html'" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                    Khám phá bạn bè
+                </button>
+                <button onclick="window.createDemoConversations()" class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                    Tạo cuộc trò chuyện demo
+                </button>
+            </div>
         </div>
     `;
+};
+
+// Create demo conversations for testing
+window.createDemoConversations = function() {
+    console.log('🎭 Creating demo conversations...');
+    
+    const demoConversations = [
+        {
+            id: 'demo_1',
+            name: 'Alice Johnson',
+            avatar: 'https://placehold.co/48x48/E91E63/FFFFFF?text=A',
+            lastMessage: 'Chào bạn! Bạn có khỏe không?',
+            timestamp: Date.now() - 300000, // 5 minutes ago
+            unreadCount: 2,
+            isOnline: true
+        },
+        {
+            id: 'demo_2', 
+            name: 'Bob Smith',
+            avatar: 'https://placehold.co/48x48/2196F3/FFFFFF?text=B',
+            lastMessage: 'Hẹn gặp lại bạn sau nhé!',
+            timestamp: Date.now() - 1800000, // 30 minutes ago
+            unreadCount: 0,
+            isOnline: false
+        },
+        {
+            id: 'demo_3',
+            name: 'Carol Wilson', 
+            avatar: 'https://placehold.co/48x48/4CAF50/FFFFFF?text=C',
+            lastMessage: 'Cảm ơn bạn đã giúp đỡ 😊',
+            timestamp: Date.now() - 3600000, // 1 hour ago
+            unreadCount: 1,
+            isOnline: true
+        }
+    ];
+    
+    window.renderConversations(demoConversations);
+    console.log('✅ Demo conversations created');
 };
 
 window.selectConversation = function(conversationId, userName, userAvatar) {

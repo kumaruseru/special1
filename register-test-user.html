@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Test User</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">🚀 Register Test User</h1>
+        
+        <div class="bg-gray-800 p-6 rounded-lg">
+            <h2 class="text-xl font-semibold mb-4">Create User for Testing</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <input id="name-input" type="text" placeholder="Full Name" value="Test User"
+                       class="bg-gray-700 px-3 py-2 rounded text-white">
+                <input id="email-input" type="email" placeholder="Email" value="nghiaht2810@gmail.com"
+                       class="bg-gray-700 px-3 py-2 rounded text-white">
+                <input id="password-input" type="password" placeholder="Password" value="test123"
+                       class="bg-gray-700 px-3 py-2 rounded text-white">
+                <input id="username-input" type="text" placeholder="Username" value="testuser"
+                       class="bg-gray-700 px-3 py-2 rounded text-white">
+            </div>
+            
+            <button onclick="registerUser()" class="w-full bg-green-600 hover:bg-green-700 px-4 py-2 rounded mb-4">
+                Register User
+            </button>
+            
+            <button onclick="testTokenRefresh()" class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded mb-4">
+                Test Token Refresh
+            </button>
+            
+            <button onclick="openMessagesPage()" class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded">
+                Open Messages Page
+            </button>
+        </div>
+
+        <!-- Console Output -->
+        <div class="bg-gray-800 p-6 rounded-lg mt-8">
+            <h2 class="text-xl font-semibold mb-4">Console Output</h2>
+            <div id="console-output" class="bg-black p-4 rounded font-mono text-sm h-64 overflow-y-auto">
+                <p class="text-green-400">Ready to register user...</p>
+            </div>
+            <button onclick="clearConsole()" class="mt-4 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">
+                Clear Console
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const PRODUCTION_URL = 'https://special-n8pm.onrender.com';
+
+        // Logging function
+        function log(message, type = 'info') {
+            const consoleOutput = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'text-red-400' : 
+                              type === 'success' ? 'text-green-400' : 
+                              type === 'warning' ? 'text-yellow-400' : 'text-white';
+            
+            const logEntry = document.createElement('p');
+            logEntry.className = colorClass;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            console.log(`[Register Test] ${message}`);
+        }
+
+        // Clear console
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '<p class="text-green-400">Console cleared...</p>';
+        }
+
+        // Register user
+        async function registerUser() {
+            const name = document.getElementById('name-input').value;
+            const email = document.getElementById('email-input').value;
+            const password = document.getElementById('password-input').value;
+            const username = document.getElementById('username-input').value;
+            
+            if (!name || !email || !password) {
+                log('❌ Please fill in all required fields', 'error');
+                return;
+            }
+            
+            log(`🔄 Registering user: ${name} (${email})...`);
+            
+            try {
+                const response = await fetch(`${PRODUCTION_URL}/api/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        password: password,
+                        username: username
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ User registered successfully: ${data.user.name}`, 'success');
+                    log(`🆔 User ID: ${data.user.id}`, 'info');
+                    log(`🔑 Token: ${data.token.slice(0, 30)}...`, 'info');
+                    
+                    // Store authentication data
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userId', data.user.id);
+                    localStorage.setItem('userName', data.user.name);
+                    localStorage.setItem('userEmail', data.user.email);
+                    localStorage.setItem('userUsername', data.user.username);
+                    
+                    log('💾 Authentication data stored in localStorage', 'success');
+                    
+                } else {
+                    log(`❌ Registration failed: ${data.message}`, 'error');
+                    if (data.message.includes('already exists')) {
+                        log('ℹ️ User already exists, trying login instead...', 'info');
+                        await testTokenRefresh();
+                    }
+                }
+            } catch (error) {
+                log(`❌ Registration error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test token refresh
+        async function testTokenRefresh() {
+            const email = document.getElementById('email-input').value;
+            
+            if (!email) {
+                log('❌ Please enter email for token refresh', 'error');
+                return;
+            }
+            
+            log(`🔄 Testing token refresh for: ${email}...`);
+            
+            try {
+                const response = await fetch(`${PRODUCTION_URL}/api/refresh-token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ Token refresh successful: ${data.user.name}`, 'success');
+                    log(`🔑 New token: ${data.token.slice(0, 30)}...`, 'info');
+                    
+                    // Store refreshed authentication data
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userId', data.user.id);
+                    localStorage.setItem('userName', data.user.name);
+                    localStorage.setItem('userEmail', data.user.email);
+                    localStorage.setItem('userUsername', data.user.username);
+                    
+                    log('💾 Refreshed authentication data stored', 'success');
+                    
+                } else {
+                    log(`❌ Token refresh failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Token refresh error: ${error.message}`, 'error');
+            }
+        }
+
+        // Open messages page
+        function openMessagesPage() {
+            const authToken = localStorage.getItem('authToken');
+            const userName = localStorage.getItem('userName');
+            
+            if (!authToken || !userName) {
+                log('❌ No authentication data found. Please register/refresh token first.', 'error');
+                return;
+            }
+            
+            log(`🚀 Opening messages page for: ${userName}`, 'success');
+            log('📋 Authentication data available:', 'info');
+            log(`   - Token: ${authToken.slice(0, 20)}...`, 'info');
+            log(`   - User: ${userName}`, 'info');
+            log(`   - Email: ${localStorage.getItem('userEmail')}`, 'info');
+            
+            // Open messages page
+            window.open('pages/messages.html', '_blank');
+        }
+
+        // Auto-load existing auth data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const userName = localStorage.getItem('userName');
+            const userEmail = localStorage.getItem('userEmail');
+            const authToken = localStorage.getItem('authToken');
+            
+            if (userName && userEmail && authToken) {
+                log(`📋 Existing authentication found:`, 'success');
+                log(`   - User: ${userName}`, 'info');
+                log(`   - Email: ${userEmail}`, 'info');
+                log(`   - Token: ${authToken.slice(0, 20)}...`, 'info');
+                log('✅ Ready to test messages page!', 'success');
+                
+                // Pre-fill form with existing data
+                document.getElementById('name-input').value = userName;
+                document.getElementById('email-input').value = userEmail;
+            } else {
+                log('ℹ️ No existing authentication data found', 'info');
+                log('👆 Please register a user first', 'info');
+            }
+        });
+    </script>
+</body>
+</html>
