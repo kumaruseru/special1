@@ -108,6 +108,90 @@ class RealTimeMessaging {
         }
     }
 
+    // === WebRTC Call Functions ===
+    
+    // Initiate a video call
+    async initiateVideoCall(userId, userName) {
+        try {
+            console.log(`📹 Initiating video call to ${userName} (${userId})`);
+            
+            // Store call info for the call window
+            const callInfo = {
+                type: 'video',
+                contact: userName,
+                state: 'outgoing',
+                targetUserId: userId
+            };
+            
+            localStorage.setItem('currentCall', JSON.stringify(callInfo));
+            
+            // Open call window
+            const callWindow = window.open(
+                '../pages/calls.html', 
+                'video_call_window', 
+                'width=800,height=600,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no'
+            );
+            
+            if (callWindow) {
+                callWindow.focus();
+                
+                // Wait for call window to load, then initiate call
+                callWindow.addEventListener('load', () => {
+                    if (callWindow.webrtcClient) {
+                        callWindow.webrtcClient.initiateCall(userId, 'video');
+                    }
+                });
+            }
+            
+            this.showNotification(`Đang gọi video cho ${userName}...`, 'info');
+            
+        } catch (error) {
+            console.error('Error initiating video call:', error);
+            this.showNotification(`Không thể gọi video cho ${userName}`, 'error');
+        }
+    }
+    
+    // Initiate a voice call
+    async initiateVoiceCall(userId, userName) {
+        try {
+            console.log(`📞 Initiating voice call to ${userName} (${userId})`);
+            
+            // Store call info for the call window
+            const callInfo = {
+                type: 'voice',
+                contact: userName,
+                state: 'outgoing',
+                targetUserId: userId
+            };
+            
+            localStorage.setItem('currentCall', JSON.stringify(callInfo));
+            
+            // Open call window
+            const callWindow = window.open(
+                '../pages/calls.html', 
+                'voice_call_window', 
+                'width=400,height=600,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no'
+            );
+            
+            if (callWindow) {
+                callWindow.focus();
+                
+                // Wait for call window to load, then initiate call
+                callWindow.addEventListener('load', () => {
+                    if (callWindow.webrtcClient) {
+                        callWindow.webrtcClient.initiateCall(userId, 'voice');
+                    }
+                });
+            }
+            
+            this.showNotification(`Đang gọi thoại cho ${userName}...`, 'info');
+            
+        } catch (error) {
+            console.error('Error initiating voice call:', error);
+            this.showNotification(`Không thể gọi thoại cho ${userName}`, 'error');
+        }
+    }
+
     switchToConversation(conversation) {
         // Update current chat ID
         this.currentChatId = conversation.id;
@@ -209,9 +293,46 @@ class RealTimeMessaging {
                     </div>
                 `;
             }
+            
+            // Update the right side with call buttons
+            const rightSection = chatHeader.querySelector('.flex.items-center.gap-2') ||
+                                 chatHeader.querySelector('.flex:last-child');
+            
+            if (rightSection) {
+                rightSection.innerHTML = `
+                    <!-- Voice Call Button -->
+                    <button onclick="realTimeMessaging.initiateVoiceCall('${user.id}', '${user.name}')" 
+                            class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
+                            title="Gọi thoại">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- Video Call Button -->
+                    <button onclick="realTimeMessaging.initiateVideoCall('${user.id}', '${user.name}')" 
+                            class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
+                            title="Gọi video">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="23 7 16 12 23 17 23 7"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                    </button>
+                    
+                    <!-- More Options -->
+                    <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-all text-gray-300 hover:text-white"
+                            title="Tùy chọn khác">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="1"/>
+                            <circle cx="19" cy="12" r="1"/>
+                            <circle cx="5" cy="12" r="1"/>
+                        </svg>
+                    </button>
+                `;
+            }
         }
         
-        console.log('Updated chat header for user:', user.name);
+        console.log('Updated chat header with call buttons for user:', user.name);
     }
 
     updateChatHeader(conversation) {
@@ -316,49 +437,191 @@ class RealTimeMessaging {
     }
 
     initializeWebSocket() {
-        // Simulate WebSocket connection using localStorage and BroadcastChannel
+        // Initialize real Socket.IO connection
+        try {
+            this.socket = io({
+                transports: ['websocket', 'polling'],
+                timeout: 10000,
+                forceNew: true
+            });
+
+            // Connection events
+            this.socket.on('connect', () => {
+                console.log('✅ Socket.IO connected:', this.socket.id);
+                this.isConnected = true;
+                this.updateConnectionStatus(true);
+                
+                // Authenticate user for messaging
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    this.socket.emit('authenticate', { token });
+                } else {
+                    console.warn('No auth token found, using guest mode');
+                    // Use current user as guest
+                    this.socket.emit('join_chat', {
+                        userId: this.currentUser.id,
+                        username: this.currentUser.name,
+                        avatar: this.currentUser.avatar
+                    });
+                }
+            });
+
+            this.socket.on('disconnect', () => {
+                console.log('❌ Socket.IO disconnected');
+                this.isConnected = false;
+                this.updateConnectionStatus(false);
+            });
+
+            this.socket.on('connect_error', (error) => {
+                console.error('Socket connection error:', error);
+                this.isConnected = false;
+                this.updateConnectionStatus(false);
+            });
+
+            // Authentication response
+            this.socket.on('authenticated', (data) => {
+                console.log('✅ Authenticated for messaging:', data);
+                this.authenticatedUserId = data.userId;
+                this.authenticatedUsername = data.username;
+            });
+
+            this.socket.on('authentication_failed', (data) => {
+                console.warn('❌ Authentication failed:', data.error);
+                // Fallback to guest mode
+                this.socket.emit('join_chat', {
+                    userId: this.currentUser.id,
+                    username: this.currentUser.name,
+                    avatar: this.currentUser.avatar
+                });
+            });
+
+            // Real-time message events
+            this.socket.on('new_message', (data) => {
+                console.log('📨 Received real-time message:', data);
+                this.receiveMessage(data);
+            });
+
+            this.socket.on('typing_start', (data) => {
+                if (data.userId !== this.currentUser.id) {
+                    this.typingUsers.add(data.username);
+                    this.showTypingIndicator();
+                }
+            });
+
+            this.socket.on('typing_stop', (data) => {
+                if (data.userId !== this.currentUser.id) {
+                    this.typingUsers.delete(data.username);
+                    this.updateTypingIndicator();
+                }
+            });
+
+            this.socket.on('user_joined', (data) => {
+                if (data.userId !== this.currentUser.id) {
+                    this.onlineUsers.add(data);
+                    this.showSystemMessage(`${data.username} đã tham gia cuộc trò chuyện`);
+                    this.updateOnlineUsers();
+                }
+            });
+
+            this.socket.on('user_left', (data) => {
+                if (data.userId !== this.currentUser.id) {
+                    this.onlineUsers.delete(data);
+                    this.showSystemMessage(`${data.username} đã rời khỏi cuộc trò chuyện`);
+                    this.updateOnlineUsers();
+                }
+            });
+
+            this.socket.on('online_users_update', (users) => {
+                console.log('👥 Online users update:', users);
+                this.onlineUsers.clear();
+                users.forEach(user => {
+                    if (user.userId !== this.currentUser.id) {
+                        this.onlineUsers.add(user);
+                    }
+                });
+                this.updateOnlineUsers();
+            });
+
+        } catch (error) {
+            console.error('Error initializing Socket.IO:', error);
+            // Fallback to BroadcastChannel for local testing
+            this.initializeFallbackMessaging();
+        }
+
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (this.socket) {
+                this.socket.emit('leave_chat', {
+                    userId: this.currentUser.id,
+                    username: this.currentUser.name
+                });
+                this.socket.disconnect();
+            }
+        });
+    }
+
+    initializeFallbackMessaging() {
+        console.log('🔄 Using fallback BroadcastChannel messaging');
         this.channel = new BroadcastChannel('cosmic_chat');
         
-        // Listen for messages from other tabs/windows
         this.channel.onmessage = (event) => {
             const data = event.data;
             this.handleWebSocketMessage(data);
         };
 
-        // Simulate connection
         setTimeout(() => {
             this.isConnected = true;
             this.updateConnectionStatus(true);
             
-            // Join the chat room
             this.broadcastMessage({
                 type: 'user_joined',
                 user: this.currentUser,
                 timestamp: Date.now()
             });
             
-            console.log('Real-time messaging connected');
+            console.log('Fallback messaging connected');
         }, 1000);
-
-        // Listen for storage events (for persistence)
-        window.addEventListener('storage', (event) => {
-            if (event.key === `messages_${this.currentChatId}`) {
-                this.loadMessageHistory();
-            }
-        });
-
-        // Handle page unload
-        window.addEventListener('beforeunload', () => {
-            this.broadcastMessage({
-                type: 'user_left',
-                user: this.currentUser,
-                timestamp: Date.now()
-            });
-        });
     }
 
     broadcastMessage(data) {
-        if (this.channel) {
+        // Send via Socket.IO if available
+        if (this.socket && this.socket.connected) {
+            switch (data.type) {
+                case 'message':
+                    this.socket.emit('send_message', {
+                        messageId: data.id,
+                        text: data.text,
+                        timestamp: data.timestamp,
+                        chatId: this.currentChatId || 'global'
+                    });
+                    break;
+                case 'typing_start':
+                    this.socket.emit('typing_start', {
+                        chatId: this.currentChatId || 'global'
+                    });
+                    break;
+                case 'typing_stop':
+                    this.socket.emit('typing_stop', {
+                        chatId: this.currentChatId || 'global'
+                    });
+                    break;
+                case 'user_joined':
+                    this.socket.emit('join_chat', {
+                        userId: this.currentUser.id,
+                        username: this.currentUser.name,
+                        avatar: this.currentUser.avatar
+                    });
+                    break;
+                case 'user_left':
+                    this.socket.emit('leave_chat', {
+                        userId: this.currentUser.id,
+                        username: this.currentUser.name
+                    });
+                    break;
+            }
+        }
+        // Fallback to BroadcastChannel for local testing
+        else if (this.channel) {
             this.channel.postMessage(data);
         }
     }

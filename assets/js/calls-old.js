@@ -33,6 +33,16 @@ const initializeAudioSystem = () => {
         callEnded: new Audio()
     };
     
+    // Set up ringtone (simple beep pattern)
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    // Simple ringtone using Web Audio API
+    audioSystem.ringtone.addEventListener('canplaythrough', () => {
+        console.log('🔊 Audio system ready');
+    });
+    
     // Set volumes
     audioSystem.ringtone.volume = 0.7;
     audioSystem.callConnected.volume = 0.5;
@@ -117,7 +127,6 @@ window.onCallError = (error) => {
     window.onCallEnded();
 };
 
-// React Components
 const OutgoingCall = ({ setCallState }) => {
     React.useEffect(() => {
         // Start ringtone for outgoing call
@@ -226,80 +235,84 @@ const ActiveCall = ({ setCallState }) => {
     const [isMuted, setIsMuted] = React.useState(false);
     const [isCameraOff, setIsCameraOff] = React.useState(false);
     const [isScreenSharing, setIsScreenSharing] = React.useState(false);
-    const [isCameraFlipped, setIsCameraFlipped] = React.useState(true);
+    const [isCameraFlipped, setIsCameraFlipped] = React.useState(true); // Default to flipped (mirror mode)
     const localVideoRef = React.useRef(null);
     const remoteVideoRef = React.useRef(null);
 
     React.useEffect(() => {
-        // Timer for call duration
         const timer = setInterval(() => {
             setElapsedTime(prevTime => prevTime + 1);
         }, 1000);
 
-        // Set up video elements for WebRTC streams
-        const setupVideoElements = () => {
-            if (localVideoRef.current) {
-                localVideoRef.current.id = 'localVideo';
-            }
-            if (remoteVideoRef.current) {
-                remoteVideoRef.current.id = 'remoteVideo';
-            }
-        };
-
-        setupVideoElements();
-
-        // Get existing streams if available
-        if (window.webrtcClient) {
-            const client = window.webrtcClient;
-            
-            if (client.localStream && localVideoRef.current) {
-                localVideoRef.current.srcObject = client.localStream;
-            }
-            
-            if (client.remoteStream && remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = client.remoteStream;
-            }
-        }
+        // Initialize media stream when component mounts
+        initializeMedia();
 
         return () => {
             clearInterval(timer);
         };
     }, []);
 
-    const handleMuteToggle = () => {
-        if (window.webrtcClient) {
-            const newMutedState = window.webrtcClient.toggleMute();
-            setIsMuted(newMutedState);
+    const initializeMedia = async () => {
+        try {
+            await webRTCManager.getUserMedia();
+            if (localVideoRef.current && localStream) {
+                localVideoRef.current.srcObject = localStream;
+            }
+            
+            // Simulate remote stream for demo
+            if (remoteVideoRef.current && !remoteStream) {
+                // Create a placeholder remote stream
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                const ctx = canvas.getContext('2d');
+                
+                // Animate the placeholder
+                const animate = () => {
+                    ctx.fillStyle = `hsl(${Date.now() * 0.01 % 360}, 70%, 50%)`;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = '48px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('👤', canvas.width / 2, canvas.height / 2);
+                    
+                    requestAnimationFrame(animate);
+                };
+                animate();
+                
+                remoteVideoRef.current.srcObject = canvas.captureStream(30);
+            }
+        } catch (error) {
+            console.error('Error initializing media:', error);
         }
     };
 
+    const handleMuteToggle = () => {
+        const newMutedState = webRTCManager.toggleMute();
+        setIsMuted(newMutedState);
+    };
+
     const handleCameraToggle = () => {
-        if (window.webrtcClient && callInfo?.type === 'video') {
-            const newCameraState = window.webrtcClient.toggleCamera();
+        if (callInfo?.type === 'video') {
+            const newCameraState = webRTCManager.toggleCamera();
             setIsCameraOff(newCameraState);
         }
     };
 
     const handleScreenShareToggle = async () => {
-        if (window.webrtcClient && callInfo?.type === 'video') {
+        if (callInfo?.type === 'video') {
             try {
-                const newScreenShareState = await window.webrtcClient.toggleScreenShare();
+                const newScreenShareState = await webRTCManager.toggleScreenShare();
                 setIsScreenSharing(newScreenShareState);
             } catch (error) {
                 console.error('Error toggling screen share:', error);
-                alert('Screen sharing failed: ' + error.message);
             }
         }
     };
 
     const handleCameraFlipToggle = () => {
         setIsCameraFlipped(!isCameraFlipped);
-    };
-
-    const handleEndCall = () => {
-        if (window.webrtcClient) {
-            window.webrtcClient.endCall();
-        }
     };
 
     const formatTime = (seconds) => {
@@ -317,22 +330,10 @@ const ActiveCall = ({ setCallState }) => {
                     {/* Remote Video Feed */}
                     <video 
                         ref={remoteVideoRef}
-                        className="w-full h-full object-cover remote-video bg-gray-900"
+                        className="w-full h-full object-cover remote-video"
                         autoPlay
                         playsInline
-                    >
-                        {/* Fallback content when no remote video */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-                            <div className="text-center text-white">
-                                <div className="w-32 h-32 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                                    </svg>
-                                </div>
-                                <p className="text-lg">{callInfo?.contact}</p>
-                            </div>
-                        </div>
-                    </video>
+                    />
 
                     {/* Local Video Feed */}
                     <div className="absolute bottom-32 sm:bottom-8 right-4 w-1/3 max-w-[250px] aspect-video rounded-lg overflow-hidden glass-pane border-2 border-blue-400">
@@ -343,14 +344,6 @@ const ActiveCall = ({ setCallState }) => {
                             playsInline
                             muted
                         />
-                        
-                        {isCameraOff && (
-                            <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
-                                <svg width="32" height="32" fill="white" viewBox="0 0 24 24">
-                                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                                </svg>
-                            </div>
-                        )}
                         
                         {/* Camera Flip Toggle Button */}
                         <button 
@@ -367,24 +360,13 @@ const ActiveCall = ({ setCallState }) => {
             ) : (
                 /* Voice Call UI */
                 <div className="w-full h-full flex flex-col items-center justify-center text-white">
-                    <img 
-                        src="https://placehold.co/200x200/8A2BE2/FFFFFF?text=C" 
-                        alt={callInfo?.contact} 
-                        className="w-48 h-48 rounded-full border-4 border-purple-400 mb-8"
-                    />
-                    <h1 className="text-4xl font-bold mb-2">{callInfo?.contact || 'Cosmic User'}</h1>
+                    <img src="https://placehold.co/200x200/8A2BE2/FFFFFF?text=C" alt={callInfo?.contact} className="w-48 h-48 rounded-full border-4 border-purple-400 mb-8"/>
+                    <h1 className="text-4xl font-bold mb-2">{callInfo?.contact || 'Cosmic Chat'}</h1>
                     
                     {/* Audio Visualization */}
                     <div className="flex gap-1 mb-8">
                         {[...Array(20)].map((_, i) => (
-                            <div 
-                                key={i} 
-                                className="w-1 bg-green-400 rounded-full voice-bar" 
-                                style={{
-                                    height: `${Math.random() * 20 + 4}px`,
-                                    animationDelay: `${i * 0.1}s`
-                                }}
-                            />
+                            <div key={i} className="w-1 bg-green-400 rounded-full voice-bar" style={{height: '4px'}}></div>
                         ))}
                     </div>
                 </div>
@@ -392,17 +374,15 @@ const ActiveCall = ({ setCallState }) => {
 
             {/* Call Info Overlay */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center text-white p-3 rounded-xl glass-pane">
-                <h2 className="text-xl font-bold">{callInfo?.contact || 'Cosmic User'}</h2>
+                <h2 className="text-xl font-bold">{callInfo?.contact || 'Cosmic Chat'}</h2>
                 <p className="text-md text-gray-300">{formatTime(elapsedTime)}</p>
             </div>
             
-            {/* Call Controls */}
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 p-4 rounded-full glass-pane">
                 {/* Mute Button */}
                 <button 
                     onClick={handleMuteToggle}
                     className={`call-button ${isMuted ? 'bg-red-600' : 'control-button'}`}
-                    title={isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng'}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         {isMuted ? (
@@ -424,7 +404,6 @@ const ActiveCall = ({ setCallState }) => {
                     <button 
                         onClick={handleCameraToggle}
                         className={`call-button ${isCameraOff ? 'bg-red-600' : 'control-button'}`}
-                        title={isCameraOff ? 'Bật camera' : 'Tắt camera'}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             {isCameraOff ? (
@@ -440,14 +419,8 @@ const ActiveCall = ({ setCallState }) => {
                 )}
 
                 {/* End Call Button */}
-                <button 
-                    onClick={handleEndCall} 
-                    className="call-button decline-button"
-                    title="Kết thúc cuộc gọi"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
-                    </svg>
+                <button onClick={() => webRTCManager.endCall()} className="call-button decline-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/></svg>
                 </button>
 
                 {/* Screen Share Button (Video calls only) */}
@@ -455,7 +428,6 @@ const ActiveCall = ({ setCallState }) => {
                     <button 
                         onClick={handleScreenShareToggle}
                         className={`call-button ${isScreenSharing ? 'bg-blue-600' : 'control-button'}`}
-                        title={isScreenSharing ? 'Dừng chia sẻ màn hình' : 'Chia sẻ màn hình'}
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 18v-6M9 15l3-3 3 3"/>
@@ -463,6 +435,11 @@ const ActiveCall = ({ setCallState }) => {
                         </svg>
                     </button>
                 )}
+
+                {/* Add Participant Button */}
+                <button className="call-button control-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+                </button>
             </div>
         </div>
     );
@@ -477,9 +454,6 @@ const App = () => {
     React.useEffect(() => {
         // Initialize call info when app mounts
         initializeCallInfo();
-        
-        // Global function to update call state
-        window.updateCallState = setCallState;
     }, []);
 
     const renderCallScreen = () => {
@@ -516,9 +490,11 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 const starGeo = new THREE.BufferGeometry();
 const starCount = 8000;
 const posArray = new Float32Array(starCount * 3);
+const velArray = new Float32Array(starCount);
 
 for (let i = 0; i < starCount * 3; i++) {
     posArray[i] = (Math.random() - 0.5) * 600;
+    velArray[i] = 0;
 }
 starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 
@@ -570,6 +546,139 @@ window.addEventListener('resize', () => {
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', () => {
     console.log('=== CALLS PAGE LOADED ===');
+    
+    // Initialize call info from localStorage
     initializeCallInfo();
+    
+    // Update UI with call information
+    updateCallUI();
+    
+    // Initialize WebRTC manager
+    const webrtcManager = new WebRTCManager();
+    
+    // Setup event listeners for call controls
+    setupCallControls();
+    
     console.log('Calls page initialization complete');
 });
+
+// Update UI with current call information
+function updateCallUI() {
+    if (!callInfo) return;
+    
+    console.log('Updating call UI with:', callInfo);
+    
+    // Update contact name
+    const contactElements = document.querySelectorAll('[data-contact-name]');
+    contactElements.forEach(el => {
+        el.textContent = callInfo.contact || 'Unknown Contact';
+    });
+    
+    // Update call type in title
+    const titleElements = document.querySelectorAll('[data-call-type]');
+    titleElements.forEach(el => {
+        el.textContent = callInfo.type === 'video' ? 'Video Call' : 'Voice Call';
+    });
+    
+    // Update call state
+    const stateElements = document.querySelectorAll('[data-call-state]');
+    stateElements.forEach(el => {
+        const states = {
+            'outgoing': 'Đang gọi...',
+            'incoming': 'Cuộc gọi đến',
+            'active': 'Đang kết nối...',
+            'connected': 'Đã kết nối'
+        };
+        el.textContent = states[callInfo.state] || 'Đang kết nối...';
+    });
+    
+    // Show/hide elements based on call type
+    if (callInfo.type === 'voice') {
+        // Hide video elements for voice calls
+        const videoElements = document.querySelectorAll('[data-video-only]');
+        videoElements.forEach(el => el.style.display = 'none');
+    }
+}
+
+// Setup event listeners for call controls
+function setupCallControls() {
+    // Mute button
+    const muteButtons = document.querySelectorAll('[data-action="mute"]');
+    muteButtons.forEach(button => {
+        button.addEventListener('click', () => toggleMute());
+    });
+    
+    // Camera toggle (video calls only)
+    const cameraButtons = document.querySelectorAll('[data-action="camera"]');
+    cameraButtons.forEach(button => {
+        button.addEventListener('click', () => toggleCamera());
+    });
+    
+    // End call button
+    const endCallButtons = document.querySelectorAll('[data-action="end-call"]');
+    endCallButtons.forEach(button => {
+        button.addEventListener('click', () => endCall());
+    });
+    
+    // Screen share button
+    const screenShareButtons = document.querySelectorAll('[data-action="screen-share"]');
+    screenShareButtons.forEach(button => {
+        button.addEventListener('click', () => toggleScreenShare());
+    });
+}
+
+// Call control functions
+function toggleMute() {
+    console.log('Toggle mute');
+    // Implementation for mute/unmute
+}
+
+function toggleCamera() {
+    console.log('Toggle camera');
+    // Implementation for camera on/off
+}
+
+function toggleScreenShare() {
+    console.log('Toggle screen share');
+    // Implementation for screen sharing
+}
+
+function endCall() {
+    console.log('=== ENDING CALL ===');
+    
+    // Play call ended sound
+    if (audioSystem && audioSystem.callEnded) {
+        try {
+            audioSystem.callEnded.play().catch(error => {
+                console.log('Could not play call ended sound:', error);
+            });
+        } catch (error) {
+            console.log('Audio system not available');
+        }
+    }
+    
+    // Clean up WebRTC connections
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    
+    // Stop local streams
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    
+    // Clear call data
+    localStorage.removeItem('currentCall');
+    
+    // Close the window after a short delay to allow sound to play
+    setTimeout(() => {
+        if (window.opener) {
+            window.close();
+        } else {
+            // If not a popup, redirect back
+            window.location.href = '../pages/messages.html';
+        }
+    }, 1000);
+}
