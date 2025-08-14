@@ -1893,6 +1893,54 @@ const activeCalls = new Map(); // callId -> call data
 io.on('connection', (socket) => {
     console.log('🔌 User connected:', socket.id);
 
+    // Handle authentication from client
+    socket.on('authenticate', async (data) => {
+        try {
+            const { token } = data;
+            if (!token) {
+                socket.emit('authentication_failed', { error: 'No token provided' });
+                return;
+            }
+
+            // Verify JWT token
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cosmic-social-secret-2024');
+            const userId = decoded.userId || decoded.id;
+            
+            // Find user in database
+            const user = await User.findById(userId);
+            if (!user) {
+                socket.emit('authentication_failed', { error: 'User not found' });
+                return;
+            }
+
+            // Store authenticated user info
+            socket.userId = user._id.toString();
+            socket.username = user.name;
+            socket.email = user.email;
+            socket.isAuthenticated = true;
+
+            console.log(`✅ User authenticated: ${user.name} (${user.email})`);
+            
+            socket.emit('authenticated', {
+                userId: socket.userId,
+                username: socket.username,
+                email: socket.email
+            });
+
+            // Add to active users
+            activeUsers.set(socket.userId, {
+                socketId: socket.id,
+                username: socket.username,
+                email: socket.email,
+                isAuthenticated: true
+            });
+
+        } catch (error) {
+            console.error('Authentication error:', error);
+            socket.emit('authentication_failed', { error: 'Invalid token' });
+        }
+    });
+
     // === Real-time Messaging ===
     
     // Join chat room (guest or authenticated)

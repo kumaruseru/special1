@@ -788,24 +788,36 @@ class RealTimeMessaging {
             console.log('UserInfo exists:', !!userInfo);
             
             if (token && userInfo) {
-                const parsedUserInfo = JSON.parse(userInfo);
-                console.log('Using authenticated user from userInfo:', parsedUserInfo);
-                
-                // Create standardized user object
-                const user = {
-                    id: parsedUserInfo._id || parsedUserInfo.id,
-                    name: parsedUserInfo.name || parsedUserInfo.fullName || parsedUserInfo.username,
-                    username: parsedUserInfo.username || parsedUserInfo.name,
-                    email: parsedUserInfo.email,
-                    avatar: parsedUserInfo.avatar || parsedUserInfo.profilePicture || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${(parsedUserInfo.name || 'U').charAt(0).toUpperCase()}`,
-                    joinedAt: parsedUserInfo.createdAt || Date.now()
-                };
-                
-                console.log('Standardized user object:', user);
-                return user;
+                try {
+                    const parsedUserInfo = JSON.parse(userInfo);
+                    console.log('Using authenticated user from userInfo:', parsedUserInfo);
+                    
+                    // Create standardized user object
+                    const user = {
+                        id: parsedUserInfo._id || parsedUserInfo.id,
+                        name: parsedUserInfo.name || parsedUserInfo.fullName || parsedUserInfo.username,
+                        username: parsedUserInfo.username || parsedUserInfo.name,
+                        email: parsedUserInfo.email,
+                        avatar: parsedUserInfo.avatar || parsedUserInfo.profilePicture || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${(parsedUserInfo.name || 'U').charAt(0).toUpperCase()}`,
+                        joinedAt: parsedUserInfo.createdAt || Date.now()
+                    };
+                    
+                    console.log('Standardized user object:', user);
+                    
+                    // Validate user has required fields
+                    if (user.id && user.name) {
+                        return user;
+                    } else {
+                        console.warn('Invalid user data, missing required fields');
+                    }
+                } catch (parseError) {
+                    console.error('Error parsing userInfo:', parseError);
+                    // Clear corrupted userInfo
+                    localStorage.removeItem('userInfo');
+                }
             }
         } catch (error) {
-            console.error('Error parsing userInfo:', error);
+            console.error('Error getting user info:', error);
         }
         
         // Fallback: Check for existing currentUser in localStorage
@@ -874,12 +886,15 @@ class RealTimeMessaging {
         try {
             this.socket = io({
                 transports: ['polling', 'websocket'], // Try polling first, then websocket
-                timeout: 20000, // Increase timeout
+                timeout: 30000, // Increase timeout for slow connections
                 forceNew: true,
                 reconnection: true,
-                reconnectionDelay: 1000,
-                reconnectionAttempts: 3,
-                maxReconnectionAttempts: 3
+                reconnectionDelay: 2000,
+                reconnectionAttempts: 8,
+                maxReconnectionAttempts: 8,
+                auth: {
+                    token: localStorage.getItem('authToken') || localStorage.getItem('token')
+                }
             });
 
             // Connection events
@@ -917,13 +932,14 @@ class RealTimeMessaging {
                 this.isConnected = false;
                 this.updateConnectionStatus(false);
                 
-                // After 3 failed attempts, switch to fallback
-                if (this.connectionAttempts >= 3) {
+                this.connectionAttempts = (this.connectionAttempts || 0) + 1;
+                
+                // After 5 failed attempts, switch to fallback
+                if (this.connectionAttempts >= 5) {
                     console.log('❌ Socket connection failed multiple times, switching to fallback');
                     this.socket.disconnect();
                     this.initializeFallbackMessaging();
                 }
-                this.connectionAttempts = (this.connectionAttempts || 0) + 1;
             });
 
             // Authentication response
