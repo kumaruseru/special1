@@ -108,6 +108,37 @@ main .glass-pane {
     overflow-y: auto;
     scroll-behavior: smooth;
     min-height: 0; /* Allow flex item to shrink */
+    padding: 1rem 0; /* Add vertical padding */
+}
+
+/* System message styling */
+.system-message {
+    margin: 1.5rem 0; /* Generous spacing around system messages */
+    text-align: center;
+}
+
+.system-message .bg-gray-600\/30 {
+    background-color: rgba(75, 85, 99, 0.3);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(75, 85, 99, 0.2);
+}
+
+/* Scrollbar styling for messages */
+.messages-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.3);
+    border-radius: 3px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(75, 85, 99, 0.5);
 }
 
 /* Main Messages Layout */
@@ -202,8 +233,114 @@ main .glass-pane {
     color: #F3F4F6;
 }
 
+/* Message Bubble Improvements */
 .message {
     animation: messageSlideIn 0.3s ease-out;
+    margin-bottom: 0.75rem; /* Reduced from mb-4 */
+    padding: 0 1rem; /* Add horizontal padding */
+}
+
+.message:last-child {
+    margin-bottom: 1rem; /* Extra space at bottom */
+}
+
+/* Message bubble sizing and spacing */
+.message .max-w-xs {
+    max-width: 18rem; /* Smaller on mobile */
+}
+
+.message .max-w-md {
+    max-width: 24rem; /* Medium size */
+}
+
+/* Responsive sizing */
+@media (min-width: 640px) {
+    .message .max-w-xs {
+        max-width: 20rem;
+    }
+    
+    .message .max-w-md {
+        max-width: 28rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .message .max-w-xs {
+        max-width: 22rem;
+    }
+    
+    .message .max-w-md {
+        max-width: 32rem;
+    }
+}
+
+/* Message content styling */
+.message .bg-indigo-600,
+.message .bg-gray-700\/50 {
+    font-size: 0.95rem; /* Slightly larger text */
+    line-height: 1.4; /* Better line spacing */
+    padding: 0.875rem 1rem; /* Increased padding for better touch targets */
+    border-radius: 1rem; /* More rounded corners */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    word-wrap: break-word; /* Handle long words */
+    overflow-wrap: break-word;
+    hyphens: auto; /* Enable hyphenation */
+}
+
+/* Handle different message types */
+.message .bg-indigo-600 {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.message .bg-gray-700\/50 {
+    background: rgba(55, 65, 81, 0.8);
+    border: 1px solid rgba(75, 85, 99, 0.3);
+    backdrop-filter: blur(8px);
+}
+
+/* Message text improvements */
+.message p {
+    margin: 0;
+    white-space: pre-wrap; /* Preserve line breaks */
+}
+
+/* Long message handling */
+.message-long {
+    max-height: 12rem;
+    overflow-y: auto;
+}
+
+.message-long::-webkit-scrollbar {
+    width: 4px;
+}
+
+.message-long::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+/* Improve spacing between consecutive messages from same user */
+.message + .message {
+    margin-top: -0.25rem; /* Reduce gap between messages */
+}
+
+/* Different spacing for messages from different users */
+.message-own + .message-other,
+.message-other + .message-own {
+    margin-top: 0.5rem; /* More space when sender changes */
+}
+
+/* Avatar spacing improvements */
+.message img {
+    flex-shrink: 0; /* Prevent avatar shrinking */
+    margin-top: 0.25rem; /* Align with message bubble */
+}
+
+/* Time and status spacing */
+.message .text-xs {
+    margin-top: 0.375rem; /* Consistent spacing */
+    opacity: 0.8;
 }
 
 @keyframes messageSlideIn {

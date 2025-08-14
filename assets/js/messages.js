@@ -587,24 +587,24 @@ class RealTimeMessaging {
         const messageElement = document.createElement('div');
         
         if (isSystem) {
-            messageElement.className = 'system-message text-center my-4';
+            messageElement.className = 'system-message';
             messageElement.innerHTML = `
-                <div class="inline-block bg-gray-600/30 text-gray-300 px-4 py-2 rounded-full text-sm">
+                <div class="inline-block bg-gray-600/30 text-gray-300 px-4 py-2 rounded-full text-sm border border-gray-600/20">
                     ${this.escapeHtml(message.text)}
                 </div>
             `;
         } else {
-            messageElement.className = `message ${isOwn ? 'message-own' : 'message-other'} mb-4`;
+            messageElement.className = `message ${isOwn ? 'message-own' : 'message-other'}`;
             messageElement.setAttribute('data-message-id', message.id);
 
             messageElement.innerHTML = `
                 <div class="flex ${isOwn ? 'justify-end' : 'justify-start'} items-start gap-3">
-                    ${!isOwn ? `<img src="${message.senderAvatar}" alt="${message.senderName}" class="w-8 h-8 rounded-full">` : ''}
+                    ${!isOwn ? `<img src="${message.senderAvatar}" alt="${message.senderName}" class="w-8 h-8 rounded-full object-cover">` : ''}
                     
-                    <div class="max-w-xs md:max-w-md ${isOwn ? 'order-first' : 'order-last'}">
-                        ${!isOwn ? `<div class="text-xs text-gray-400 mb-1 px-2">${message.senderName}</div>` : ''}
-                        <div class="${isOwn ? 'bg-indigo-600 rounded-lg rounded-br-none' : 'bg-gray-700/50 rounded-lg rounded-tl-none'} p-3">
-                            <p class="text-white">${this.escapeHtml(message.text)}</p>
+                    <div class="max-w-xs lg:max-w-md ${isOwn ? 'order-first' : 'order-last'}">
+                        ${!isOwn ? `<div class="text-xs text-gray-400 mb-1 px-2">${this.escapeHtml(message.senderName)}</div>` : ''}
+                        <div class="${isOwn ? 'bg-indigo-600 text-white' : 'bg-gray-700/50 text-gray-100'} rounded-lg p-3 shadow-sm ${message.text.length > 200 ? 'message-long' : ''}">
+                            <p class="break-words">${this.escapeHtml(message.text)}</p>
                         </div>
                         
                         <div class="flex items-center gap-1 mt-1 px-2 text-xs text-gray-400">
@@ -613,7 +613,7 @@ class RealTimeMessaging {
                         </div>
                     </div>
                     
-                    ${isOwn ? `<img src="${message.senderAvatar}" alt="${message.senderName}" class="w-8 h-8 rounded-full">` : ''}
+                    ${isOwn ? `<img src="${message.senderAvatar}" alt="${message.senderName}" class="w-8 h-8 rounded-full object-cover">` : ''}
                 </div>
             `;
         }
