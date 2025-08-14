@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const { ObjectId } = require('mongodb');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -22,6 +23,10 @@ const {
 const Redis = require('redis');
 const { Pool } = require('pg');
 const neo4j = require('neo4j-driver');
+const { MongoClient } = require('mongodb');
+
+// Global database connections
+let mongoConnection = null;
 
 const app = express();
 const server = http.createServer(app);
@@ -2636,9 +2641,229 @@ io.on('connection', (socket) => {
 
 });
 
-// Start server
-server.listen(PORT, () => {
-    console.log(`🚀 Cosmic Social Network server running on http://localhost:${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔌 WebRTC signaling server ready`);
+// === HEALTH CHECK ENDPOINT ===
+app.get('/health', (req, res) => {
+    console.log('Health check accessed at:', new Date().toISOString());
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        database: mongoConnection ? 'Connected' : 'Disconnected',
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        port: PORT,
+        message: 'Server is running'
+    });
+});
+
+// === TOKEN REFRESH ENDPOINT ===
+app.post('/api/refresh-token', async (req, res) => {
+    try {
+        const { email, userId } = req.body;
+        console.log('🔄 Token refresh request:', { email, userId });
+        
+        if (!email && !userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email or userId required'
+            });
+        }
+
+        if (!mongoConnection) {
+            console.log('Database not available for token refresh');
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        const db = mongoConnection.db();
+        const usersCollection = db.collection('users');
+
+        // Find user by email or ID
+        const user = userId ? 
+            await usersCollection.findOne({ _id: new ObjectId(userId) }) :
+            await usersCollection.findOne({ email: email });
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Generate new token
+        const tokenPayload = {
+            userId: user._id.toString(),
+            email: user.email,
+            username: user.username || user.name
+        };
+
+        const newToken = jwt.sign(
+            tokenPayload,
+            process.env.JWT_SECRET || 'cosmic_secret_key_2024',
+            { expiresIn: '7d' }
+        );
+
+        console.log('✅ Token refresh successful for:', user.email);
+        
+        res.json({
+            success: true,
+            message: 'Token refreshed successfully',
+            token: newToken,
+            user: {
+                id: user._id.toString(),
+                email: user.email,
+                username: user.username || user.name,
+                name: user.name
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Token refresh error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Token refresh failed',
+            error: error.message
+        });
+    }
+});
+
+// === API ENDPOINTS ===
+// Get users endpoint
+app.get('/api/users', async (req, res) => {
+    try {
+        const { limit = 10, search, filter = 'all' } = req.query;
+        
+        if (!mongoConnection) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        const db = mongoConnection.db();
+        const usersCollection = db.collection('users');
+        
+        let query = {};
+        
+        // Add search filter
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        const users = await usersCollection
+            .find(query)
+            .limit(parseInt(limit))
+            .project({ 
+                password: 0,  // Don't return password
+                refreshTokens: 0  // Don't return refresh tokens
+            })
+            .toArray();
+
+        res.json({
+            success: true,
+            users: users.map(user => ({
+                id: user._id.toString(),
+                name: user.name || user.username,
+                username: user.username,
+                email: user.email,
+                avatar: user.avatar || `https://placehold.co/100x100/4F46E5/FFFFFF?text=${(user.name || user.username || 'U')[0].toUpperCase()}`,
+                isOnline: Math.random() > 0.5, // Random online status for demo
+                lastSeen: new Date(Date.now() - Math.random() * 86400000).toISOString()
+            })),
+            count: users.length
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching users:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users'
+        });
+    }
+});
+
+// Get conversations endpoint
+app.get('/api/conversations', async (req, res) => {
+    try {
+        if (!mongoConnection) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        // Return empty conversations for now (can be enhanced later)
+        res.json({
+            success: true,
+            conversations: [],
+            message: 'No conversations yet'
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching conversations:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch conversations'
+        });
+    }
+});
+
+// === DATABASE INITIALIZATION ===
+async function initializeDatabase() {
+    try {
+        console.log('🔌 Initializing database connection...');
+        
+        const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+        
+        if (!mongoUri) {
+            console.log('⚠️  MongoDB URI not provided. Running without database.');
+            return;
+        }
+        
+        mongoConnection = await MongoClient.connect(mongoUri, {
+            maxPoolSize: 10,
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+            family: 4
+        });
+        
+        console.log('✅ MongoDB connected successfully');
+        
+    } catch (error) {
+        console.error('❌ Database connection failed:', error.message);
+        console.log('⚠️  Running without database connection');
+    }
+    
+    console.log('✅ Database initialization complete');
+}
+
+// === SERVER STARTUP ===
+async function startServer() {
+    console.log('🚀 Starting Cosmic Social Network server...');
+    console.log('📍 Node version:', process.version);
+    console.log('📍 Environment:', process.env.NODE_ENV || 'development');
+    console.log('📍 Port:', PORT);
+    
+    // Initialize database
+    await initializeDatabase();
+    
+    // Start HTTP server
+    server.listen(PORT, () => {
+        console.log(`🚀 Cosmic Social Network server running on port ${PORT}`);
+        console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`🔗 Health Check: http://localhost:${PORT}/health`);
+        console.log(`🔌 WebRTC signaling server ready`);
+        console.log('✅ Server startup complete');
+    });
+}
+
+// Start the server
+startServer().catch(error => {
+    console.error('💥 Failed to start server:', error);
+    process.exit(1);
 });
