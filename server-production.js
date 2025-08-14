@@ -350,6 +350,160 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// JWT middleware for protected routes
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'Access token required'
+        });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET || 'default-secret-key', (err, user) => {
+        if (err) {
+            return res.status(403).json({
+                success: false,
+                message: 'Invalid or expired token'
+            });
+        }
+        req.user = user;
+        next();
+    });
+};
+
+// Protected API endpoints
+app.get('/api/profile/me', authenticateToken, async (req, res) => {
+    try {
+        if (!mongoConnection) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        const user = await User.findById(req.user.userId).select('-password -salt');
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                fullName: `${user.firstName} ${user.lastName}`,
+                gender: user.gender,
+                birthDate: user.birthDate,
+                avatar: user.avatar || `https://placehold.co/96x96/4F46E5/FFFFFF?text=${user.firstName.charAt(0)}${user.lastName.charAt(0)}`,
+                bio: user.bio,
+                posts: 0, // Will be calculated later
+                friendsCount: 0 // Will be calculated later
+            }
+        });
+
+    } catch (error) {
+        console.error('💥 Get profile error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting profile'
+        });
+    }
+});
+
+// Get user posts endpoint
+app.get('/api/posts/user/me', authenticateToken, async (req, res) => {
+    try {
+        // For now, return empty array as we don't have posts collection yet
+        res.json({
+            success: true,
+            posts: []
+        });
+    } catch (error) {
+        console.error('💥 Get user posts error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting user posts'
+        });
+    }
+});
+
+// Get friends endpoint
+app.get('/api/friends', authenticateToken, async (req, res) => {
+    try {
+        // For now, return empty array as we don't have friends system yet
+        res.json({
+            success: true,
+            friends: []
+        });
+    } catch (error) {
+        console.error('💥 Get friends error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting friends'
+        });
+    }
+});
+
+// Get feed endpoint
+app.get('/api/posts', authenticateToken, async (req, res) => {
+    try {
+        // For now, return empty array as we don't have posts collection yet
+        res.json({
+            success: true,
+            posts: []
+        });
+    } catch (error) {
+        console.error('💥 Get feed error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting feed'
+        });
+    }
+});
+
+// Create post endpoint
+app.post('/api/posts', authenticateToken, async (req, res) => {
+    try {
+        const { content, images, taggedFriends, location } = req.body;
+        
+        // For now, just return success without saving to database
+        res.json({
+            success: true,
+            message: 'Post created successfully',
+            post: {
+                id: Date.now().toString(),
+                content,
+                images: images || [],
+                taggedFriends: taggedFriends || [],
+                location: location || null,
+                author: {
+                    id: req.user.userId,
+                    name: 'User',
+                    avatar: 'https://placehold.co/48x48/4F46E5/FFFFFF?text=U'
+                },
+                createdAt: new Date().toISOString(),
+                likesCount: 0,
+                commentsCount: 0,
+                isLiked: false
+            }
+        });
+    } catch (error) {
+        console.error('💥 Create post error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating post'
+        });
+    }
+});
+
 // Catch all other routes and serve index.html (for SPA)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));

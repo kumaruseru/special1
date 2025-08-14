@@ -30,7 +30,8 @@ class MessagesManager {
         
         this.currentUser = null;
         this.activeConversation = null;
-        this.apiBaseUrl = 'http://localhost:8080/api';
+        // Use environment config for API URL
+        this.apiBaseUrl = window.ENV_CONFIG ? window.ENV_CONFIG.apiBaseUrl : 'http://localhost:3000/api';
         
         // Audio system for call sounds
         this.audioSystem = {

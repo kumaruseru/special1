@@ -3,7 +3,8 @@ class FriendRequestsManager {
     constructor() {
         this.friendRequests = [];
         this.allRequests = [];
-        this.apiBaseUrl = 'http://localhost:8080/api';
+        // Use environment config for API URL
+        this.apiBaseUrl = window.ENV_CONFIG ? window.ENV_CONFIG.apiBaseUrl : 'http://localhost:3000/api';
         this.currentUser = null;
         this.currentFilter = 'all';
         
