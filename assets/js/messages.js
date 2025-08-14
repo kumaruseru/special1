@@ -16,10 +16,10 @@ class RealTimeMessaging {
         this.loadConversations(); // Load real conversations from database
         this.updateChatLayout();
         
-        // Check for direct message after a short delay to ensure DOM is ready
+        // Check for direct message after a longer delay to ensure DOM is fully ready
         setTimeout(() => {
             this.checkForDirectMessage();
-        }, 100);
+        }, 500);
     }
 
     checkForDirectMessage() {
@@ -38,8 +38,9 @@ class RealTimeMessaging {
                 
                 // Validate user data before starting conversation
                 if (messageUser && messageUser.name && messageUser.name !== 'undefined') {
-                    // Start a conversation with this user
-                    this.startConversationWith(messageUser);
+                    console.log('Valid user data found, starting conversation...');
+                    // Ensure elements are ready before starting conversation
+                    this.waitForElementsAndStartConversation(messageUser);
                 } else {
                     console.warn('Invalid user data, not starting conversation:', messageUser);
                 }
@@ -53,6 +54,31 @@ class RealTimeMessaging {
         } else {
             console.log('No message user data found');
         }
+    }
+
+    waitForElementsAndStartConversation(user) {
+        const maxRetries = 10;
+        let retries = 0;
+        
+        const checkAndStart = () => {
+            const chatWindow = document.getElementById('chat-window');
+            const emptyPlaceholder = document.getElementById('empty-chat-placeholder');
+            
+            if (chatWindow && emptyPlaceholder) {
+                console.log('Elements found, starting conversation with:', user.name);
+                this.startConversationWith(user);
+            } else if (retries < maxRetries) {
+                retries++;
+                console.log(`Elements not ready, retrying... (${retries}/${maxRetries})`);
+                setTimeout(checkAndStart, 200);
+            } else {
+                console.error('Could not find required elements after maximum retries');
+                // Try to start conversation anyway
+                this.startConversationWith(user);
+            }
+        };
+        
+        checkAndStart();
     }
 
     async startConversationWith(user) {
@@ -497,20 +523,32 @@ class RealTimeMessaging {
         if (chatWindow && emptyPlaceholder) {
             console.log('Hiding empty placeholder and showing chat window');
             
-            // Use direct style manipulation to be sure
+            // Force display using both style and classes
             emptyPlaceholder.style.display = 'none';
-            chatWindow.style.display = 'flex';
-            
-            // Also remove/add classes as backup
             emptyPlaceholder.classList.add('hidden');
+            
+            chatWindow.style.display = 'flex';
             chatWindow.classList.remove('hidden');
+            
+            // Make sure parent container shows the right panel
+            const rightPanel = chatWindow.parentElement;
+            if (rightPanel) {
+                rightPanel.style.display = 'block';
+                rightPanel.classList.remove('hidden');
+            }
             
             console.log('Chat window display style after change:', chatWindow.style.display);
             console.log('Chat window classes after change:', chatWindow.className);
+            console.log('Empty placeholder display style:', emptyPlaceholder.style.display);
+            console.log('Empty placeholder classes:', emptyPlaceholder.className);
         } else {
             console.error('Required elements not found!');
             if (!chatWindow) console.error('chat-window element not found');
             if (!emptyPlaceholder) console.error('empty-chat-placeholder element not found');
+            
+            // Debug: log all elements with these IDs
+            console.log('All elements with chat-window ID:', document.querySelectorAll('#chat-window'));
+            console.log('All elements with empty-chat-placeholder ID:', document.querySelectorAll('#empty-chat-placeholder'));
         }
     }
 
