@@ -151,9 +151,34 @@ async function loadSuggestedUsers() {
             userEmail: userEmail
         });
         
-        // If we have user data but no token, use demo mode
+        // If we have user data but no token, try API without auth first
         if (!token && (userName || userEmail)) {
-            console.log('🔄 No token but have user data - using demo mode');
+            console.log('🔄 No token but have user data - trying API without auth');
+            
+            try {
+                const response = await fetch('/api/users?limit=10&filter=' + currentFilter, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 API Response without auth:', data);
+                    
+                    if (data.success && data.users) {
+                        currentUsers = data.users || [];
+                        displaySearchResults(currentUsers, null, data.message || 'Gợi ý cho bạn');
+                        return; // Success, no need for mock users
+                    }
+                }
+            } catch (error) {
+                console.log('API without auth failed:', error.message);
+            }
+            
+            // Fallback to mock users if API fails
+            console.log('🔄 Falling back to mock users');
             showMockUsers();
             return;
         }

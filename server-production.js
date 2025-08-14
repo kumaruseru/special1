@@ -998,6 +998,159 @@ app.get('/api/posts', authenticateToken, async (req, res) => {
     }
 });
 
+// Get users endpoint for discovery (public access for demo)
+app.get('/api/users', async (req, res) => {
+    try {
+        console.log('📋 Users endpoint accessed:', req.query);
+        const { limit = 10, filter = 'all' } = req.query;
+        
+        if (!mongoConnection) {
+            console.log('Database not available, returning mock users');
+            // Return mock users when database not available
+            const mockUsers = [
+                {
+                    id: 'demo_1',
+                    firstName: 'Alice',
+                    lastName: 'Johnson', 
+                    email: 'alice@example.com',
+                    fullName: 'Alice Johnson',
+                    avatar: 'https://placehold.co/80x80/4F46E5/FFFFFF?text=A'
+                },
+                {
+                    id: 'demo_2',
+                    firstName: 'Bob', 
+                    lastName: 'Smith',
+                    email: 'bob@example.com',
+                    fullName: 'Bob Smith',
+                    avatar: 'https://placehold.co/80x80/10B981/FFFFFF?text=B'
+                },
+                {
+                    id: 'demo_3',
+                    firstName: 'Carol',
+                    lastName: 'Davis',
+                    email: 'carol@example.com',
+                    fullName: 'Carol Davis', 
+                    avatar: 'https://placehold.co/80x80/F59E0B/FFFFFF?text=C'
+                },
+                {
+                    id: 'demo_4',
+                    firstName: 'David',
+                    lastName: 'Wilson',
+                    email: 'david@example.com',
+                    fullName: 'David Wilson',
+                    avatar: 'https://placehold.co/80x80/EF4444/FFFFFF?text=D'
+                },
+                {
+                    id: 'demo_5',
+                    firstName: 'Emma',
+                    lastName: 'Brown',
+                    email: 'emma@example.com', 
+                    fullName: 'Emma Brown',
+                    avatar: 'https://placehold.co/80x80/8B5CF6/FFFFFF?text=E'
+                }
+            ];
+            
+            return res.json({
+                success: true,
+                users: mockUsers.slice(0, parseInt(limit)),
+                total: mockUsers.length,
+                message: 'Demo users (database offline)'
+            });
+        }
+
+        // Try to get real users from database
+        const users = await User.find({})
+            .select('firstName lastName email fullName')
+            .limit(parseInt(limit))
+            .lean();
+
+        const formattedUsers = users.map(user => ({
+            id: user._id.toString(),
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            fullName: user.fullName || `${user.firstName} ${user.lastName}`,
+            avatar: `https://placehold.co/80x80/4F46E5/FFFFFF?text=${(user.firstName || 'U').charAt(0).toUpperCase()}`
+        }));
+
+        res.json({
+            success: true,
+            users: formattedUsers,
+            total: formattedUsers.length,
+            message: 'Users loaded successfully'
+        });
+
+    } catch (error) {
+        console.error('❌ Get users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting users'
+        });
+    }
+});
+
+// Token refresh endpoint for users with valid user data
+app.post('/api/refresh-token', async (req, res) => {
+    try {
+        const { email, userId } = req.body;
+        console.log('🔄 Token refresh request:', { email, userId });
+        
+        if (!email && !userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email or userId required'
+            });
+        }
+
+        if (!mongoConnection) {
+            console.log('Database not available for token refresh');
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        // Find user by email or ID
+        const user = await User.findOne(userId ? { _id: userId } : { email });
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Generate new token
+        const token = jwt.sign(
+            { userId: user._id, email: user.email },
+            process.env.JWT_SECRET || 'cosmic-social-secret-2024',
+            { expiresIn: '30d' }
+        );
+
+        console.log('✅ Token refreshed for:', user.email);
+        
+        res.json({
+            success: true,
+            token: token,
+            user: {
+                id: user._id.toString(),
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                fullName: user.fullName || `${user.firstName} ${user.lastName}`
+            },
+            message: 'Token refreshed successfully'
+        });
+
+    } catch (error) {
+        console.error('❌ Token refresh error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error refreshing token'
+        });
+    }
+});
+
 // Create post endpoint
 app.post('/api/posts', authenticateToken, async (req, res) => {
     try {

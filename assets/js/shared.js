@@ -113,9 +113,21 @@ function checkAuth() {
         console.log('Token synced to standard key');
     }
     
-    // If we have user data but no token, user might be in demo mode
+    // If we have user data but no token, try to refresh token
     if (!token && (userName || userEmail)) {
-        console.log('🔄 User has data but no token - allowing demo mode access');
+        console.log('🔄 User has data but no token - attempting token refresh...');
+        
+        // Try to refresh token in background
+        tryRefreshToken(userEmail, userName).then(success => {
+            if (success) {
+                console.log('✅ Token refresh successful, reloading page...');
+                // Reload page to reinitialize with new token
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                console.log('⚠️ Token refresh failed, continuing in demo mode');
+            }
+        });
+        
         return true; // Allow access for demo/guest users
     }
     
@@ -160,6 +172,51 @@ function checkAuth() {
     
     console.log('Authentication successful');
     return true;
+}
+
+// Try to refresh token using available user data
+async function tryRefreshToken(email, userName) {
+    try {
+        if (!email) {
+            console.log('No email available for token refresh');
+            return false;
+        }
+
+        console.log('🔄 Attempting token refresh for:', email);
+        
+        const response = await fetch('/api/refresh-token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email })
+        });
+
+        if (!response.ok) {
+            console.warn('Token refresh request failed:', response.status);
+            return false;
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.token) {
+            console.log('✅ Token refresh successful');
+            
+            // Store new token
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('authToken', data.token);
+            localStorage.setItem('isLoggedIn', 'true');
+            
+            return true;
+        } else {
+            console.warn('Token refresh failed:', data.message);
+            return false;
+        }
+        
+    } catch (error) {
+        console.error('Token refresh error:', error);
+        return false;
+    }
 }
 
 // Logout function
