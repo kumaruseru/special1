@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Telegram Auth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="assets/js/telegram-auth.js"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">🔐 TelegramAuth Test Page</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Auth State -->
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h2 class="text-xl font-semibold mb-4">Authentication State</h2>
+                <div id="auth-state" class="space-y-2">
+                    <p class="text-gray-400">Loading...</p>
+                </div>
+                <button onclick="refreshAuthState()" class="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                    Refresh State
+                </button>
+            </div>
+
+            <!-- Actions -->
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <h2 class="text-xl font-semibold mb-4">Actions</h2>
+                <div class="space-y-4">
+                    <button onclick="testLogin()" class="w-full bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+                        Test Login
+                    </button>
+                    <button onclick="testApiCall()" class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded">
+                        Test API Call
+                    </button>
+                    <button onclick="testRefreshToken()" class="w-full bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded">
+                        Test Token Refresh
+                    </button>
+                    <button onclick="testLogout()" class="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+                        Test Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Console Output -->
+            <div class="bg-gray-800 p-6 rounded-lg md:col-span-2">
+                <h2 class="text-xl font-semibold mb-4">Console Output</h2>
+                <div id="console-output" class="bg-black p-4 rounded font-mono text-sm h-64 overflow-y-auto">
+                    <p class="text-green-400">Console ready...</p>
+                </div>
+                <button onclick="clearConsole()" class="mt-4 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded">
+                    Clear Console
+                </button>
+            </div>
+
+            <!-- Local Storage -->
+            <div class="bg-gray-800 p-6 rounded-lg md:col-span-2">
+                <h2 class="text-xl font-semibold mb-4">Local Storage Contents</h2>
+                <div id="localStorage-content" class="bg-black p-4 rounded font-mono text-sm">
+                    <p class="text-gray-400">Loading...</p>
+                </div>
+                <button onclick="refreshLocalStorage()" class="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                    Refresh Storage
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let telegramAuth;
+        
+        // Initialize TelegramAuth
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🔐 Initializing TelegramAuth...');
+            try {
+                telegramAuth = new TelegramAuth();
+                log('✅ TelegramAuth initialized successfully');
+                refreshAuthState();
+                refreshLocalStorage();
+            } catch (error) {
+                log('❌ Failed to initialize TelegramAuth: ' + error.message, 'error');
+            }
+        });
+
+        // Logging function
+        function log(message, type = 'info') {
+            const consoleOutput = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'text-red-400' : 
+                              type === 'success' ? 'text-green-400' : 
+                              type === 'warning' ? 'text-yellow-400' : 'text-white';
+            
+            const logEntry = document.createElement('p');
+            logEntry.className = colorClass;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // Also log to browser console
+            console.log(`[TelegramAuth Test] ${message}`);
+        }
+
+        // Clear console
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '<p class="text-green-400">Console cleared...</p>';
+        }
+
+        // Refresh auth state
+        function refreshAuthState() {
+            if (!telegramAuth) {
+                log('❌ TelegramAuth not initialized', 'error');
+                return;
+            }
+            
+            try {
+                const authState = telegramAuth.getAuthState();
+                const authStateDiv = document.getElementById('auth-state');
+                
+                authStateDiv.innerHTML = `
+                    <div class="space-y-2 text-sm">
+                        <p><span class="font-semibold">Authenticated:</span> 
+                           <span class="${authState.isAuthenticated ? 'text-green-400' : 'text-red-400'}">
+                               ${authState.isAuthenticated ? '✅ Yes' : '❌ No'}
+                           </span>
+                        </p>
+                        <p><span class="font-semibold">User ID:</span> ${authState.userId || 'N/A'}</p>
+                        <p><span class="font-semibold">Username:</span> ${authState.username || 'N/A'}</p>
+                        <p><span class="font-semibold">Email:</span> ${authState.email || 'N/A'}</p>
+                        <p><span class="font-semibold">Session Active:</span> 
+                           <span class="${authState.hasValidSession ? 'text-green-400' : 'text-red-400'}">
+                               ${authState.hasValidSession ? '✅ Yes' : '❌ No'}
+                           </span>
+                        </p>
+                        <p><span class="font-semibold">Last Refresh:</span> ${authState.lastRefresh ? new Date(authState.lastRefresh).toLocaleString() : 'Never'}</p>
+                        <p><span class="font-semibold">Token Expires:</span> ${authState.tokenExpiry ? new Date(authState.tokenExpiry).toLocaleString() : 'Unknown'}</p>
+                    </div>
+                `;
+                
+                log('🔍 Auth state refreshed');
+            } catch (error) {
+                log('❌ Error getting auth state: ' + error.message, 'error');
+            }
+        }
+
+        // Test login
+        function testLogin() {
+            log('🔑 Testing login...');
+            // Simulate login with test data
+            const testUser = {
+                id: 'test-user-123',
+                username: 'testuser',
+                email: 'test@example.com',
+                name: 'Test User'
+            };
+            const testToken = 'test-jwt-token-12345';
+            
+            // Set localStorage data to simulate login
+            localStorage.setItem('authToken', testToken);
+            localStorage.setItem('userId', testUser.id);
+            localStorage.setItem('userName', testUser.name);
+            localStorage.setItem('userEmail', testUser.email);
+            localStorage.setItem('userUsername', testUser.username);
+            
+            log('✅ Test login data set', 'success');
+            refreshAuthState();
+            refreshLocalStorage();
+        }
+
+        // Test API call
+        async function testApiCall() {
+            if (!telegramAuth) {
+                log('❌ TelegramAuth not initialized', 'error');
+                return;
+            }
+            
+            log('📡 Testing API call...');
+            try {
+                const response = await telegramAuth.makeAuthenticatedRequest('/api/users?limit=5');
+                log(`📊 API Response: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ API call successful: ' + JSON.stringify(data).slice(0, 100) + '...', 'success');
+                } else {
+                    log('⚠️ API call failed but no error thrown', 'warning');
+                }
+            } catch (error) {
+                log('❌ API call error: ' + error.message, 'error');
+            }
+        }
+
+        // Test token refresh
+        async function testRefreshToken() {
+            if (!telegramAuth) {
+                log('❌ TelegramAuth not initialized', 'error');
+                return;
+            }
+            
+            log('🔄 Testing token refresh...');
+            try {
+                const success = await telegramAuth.refreshAuthToken();
+                if (success) {
+                    log('✅ Token refresh successful', 'success');
+                } else {
+                    log('⚠️ Token refresh failed', 'warning');
+                }
+                refreshAuthState();
+                refreshLocalStorage();
+            } catch (error) {
+                log('❌ Token refresh error: ' + error.message, 'error');
+            }
+        }
+
+        // Test logout
+        function testLogout() {
+            if (!telegramAuth) {
+                log('❌ TelegramAuth not initialized', 'error');
+                return;
+            }
+            
+            log('🚪 Testing logout...');
+            try {
+                telegramAuth.logout();
+                log('✅ Logout successful', 'success');
+                refreshAuthState();
+                refreshLocalStorage();
+            } catch (error) {
+                log('❌ Logout error: ' + error.message, 'error');
+            }
+        }
+
+        // Refresh localStorage display
+        function refreshLocalStorage() {
+            const storageDiv = document.getElementById('localStorage-content');
+            const relevantKeys = ['authToken', 'token', 'cosmic_token', 'userId', 'userName', 'userEmail', 'userUsername'];
+            
+            let content = '<div class="space-y-1">';
+            relevantKeys.forEach(key => {
+                const value = localStorage.getItem(key);
+                const displayValue = value ? (value.length > 50 ? value.slice(0, 50) + '...' : value) : 'null';
+                content += `<p><span class="text-blue-400">${key}:</span> ${displayValue}</p>`;
+            });
+            content += '</div>';
+            
+            storageDiv.innerHTML = content;
+            log('📦 Local storage refreshed');
+        }
+
+        // Auto-refresh every 10 seconds
+        setInterval(() => {
+            refreshAuthState();
+            refreshLocalStorage();
+        }, 10000);
+    </script>
+</body>
+</html>

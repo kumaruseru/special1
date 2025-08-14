@@ -1,5 +1,14 @@
 // --- Page Navigation Logic ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Telegram-inspired authentication
+    if (typeof TelegramAuth !== 'undefined') {
+        console.log('🔐 Initializing TelegramAuth for Discovery page');
+        window.telegramAuth = new TelegramAuth();
+        console.log('✅ TelegramAuth initialized successfully');
+    } else {
+        console.warn('⚠️ TelegramAuth class not available, falling back to legacy auth');
+    }
+
     const mainNav = document.getElementById('main-nav');
     const navLinks = mainNav.querySelectorAll('.nav-link');
     const pages = document.querySelectorAll('.page-content');
@@ -120,6 +129,7 @@ function initializeFriendSearch() {
     });
 }
 
+// Enhanced user loading with Telegram-inspired authentication
 async function loadSuggestedUsers() {
     if (isLoading) return;
     
@@ -127,15 +137,83 @@ async function loadSuggestedUsers() {
     if (!searchResults) return;
 
     isLoading = true;
-    
+
     // Show loading state
     searchResults.innerHTML = `
         <div class="text-center py-8">
             <div class="animate-spin w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p class="text-gray-400">Đang tải gợi ý cho bạn...</p>
+            <p class="text-gray-400">Tải danh sách người dùng...</p>
         </div>
     `;
 
+    try {
+        // Use Telegram-inspired auth manager
+        if (window.telegramAuth) {
+            console.log('🔐 TelegramAuth: Using advanced authentication');
+            
+            const authState = window.telegramAuth.getAuthState();
+            console.log('🔍 TelegramAuth: Current state:', authState);
+            
+            if (!authState.isAuthenticated) {
+                console.log('❌ TelegramAuth: User not authenticated');
+                window.telegramAuth.handleAuthFailure();
+                return;
+            }
+
+            try {
+                // Make authenticated request using TelegramAuth
+                const response = await window.telegramAuth.makeAuthenticatedRequest(
+                    `/api/users?limit=10&filter=${currentFilter}`
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 TelegramAuth: API Response:', data);
+
+                    if (data.success) {
+                        currentUsers = data.users || [];
+                        displaySearchResults(currentUsers, null, 'Gợi ý cho bạn');
+                        return;
+                    } else {
+                        throw new Error(data.message || 'API request failed');
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('❌ TelegramAuth: API request failed:', error);
+                // TelegramAuth will handle token refresh automatically
+                throw error;
+            }
+        }
+
+        // Fallback to original logic if TelegramAuth not available
+        console.log('⚠️ TelegramAuth not available, using fallback');
+        await loadSuggestedUsersLegacy();
+
+    } catch (error) {
+        console.error('Error loading suggested users:', error);
+        searchResults.innerHTML = `
+            <div class="text-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 text-red-500">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p class="text-gray-400 mb-2">Không thể tải danh sách người dùng</p>
+                <p class="text-gray-500 text-sm">${error.message}</p>
+                <button onclick="loadSuggestedUsers()" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
+                    Thử lại
+                </button>
+            </div>
+        `;
+    } finally {
+        isLoading = false;
+    }
+}
+
+// Legacy fallback function
+async function loadSuggestedUsersLegacy() {
+    console.log('🔄 Using legacy authentication method');
+    
     try {
         // Check all possible token names (same as shared.js)
         const token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
@@ -292,6 +370,7 @@ async function loadUsersWithToken(token) {
     }
 }
 
+// Enhanced search with Telegram-inspired authentication
 async function performSearch(query) {
     if (isLoading) return;
     
@@ -308,6 +387,73 @@ async function performSearch(query) {
         </div>
     `;
 
+    try {
+        // Use Telegram-inspired auth manager
+        if (window.telegramAuth) {
+            console.log('🔐 TelegramAuth: Using advanced authentication for search');
+            
+            const authState = window.telegramAuth.getAuthState();
+            console.log('🔍 TelegramAuth Search: Current state:', authState);
+            
+            if (!authState.isAuthenticated) {
+                console.log('❌ TelegramAuth Search: User not authenticated');
+                window.telegramAuth.handleAuthFailure();
+                return;
+            }
+
+            try {
+                // Make authenticated search request using TelegramAuth
+                const response = await window.telegramAuth.makeAuthenticatedRequest(
+                    `/api/users?search=${encodeURIComponent(query)}&filter=${currentFilter}&limit=20`
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 TelegramAuth Search: API Response:', data);
+
+                    if (data.success) {
+                        currentUsers = data.users || [];
+                        displaySearchResults(currentUsers, query);
+                        return;
+                    } else {
+                        throw new Error(data.message || 'Search request failed');
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('❌ TelegramAuth Search: API request failed:', error);
+                throw error;
+            }
+        }
+
+        // Fallback to legacy search if TelegramAuth not available
+        console.log('⚠️ TelegramAuth not available for search, using fallback');
+        await performSearchLegacy(query);
+
+    } catch (error) {
+        console.error('Error searching users:', error);
+        searchResults.innerHTML = `
+            <div class="text-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 text-red-500">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p class="text-gray-400 mb-2">Không thể tìm kiếm</p>
+                <p class="text-gray-500 text-sm">${error.message}</p>
+                <button onclick="performSearch('${query}')" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
+                    Thử lại
+                </button>
+            </div>
+        `;
+    } finally {
+        isLoading = false;
+    }
+}
+
+// Legacy search fallback function
+async function performSearchLegacy(query) {
+    console.log('🔄 Using legacy search method');
+    
     try {
         // Check all possible token names (same as loadSuggestedUsers)
         const token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
@@ -335,20 +481,9 @@ async function performSearch(query) {
         } else {
             throw new Error(data.message);
         }
-
     } catch (error) {
-        console.error('Error searching users:', error);
-        searchResults.innerHTML = `
-            <div class="text-center py-8">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 text-red-500">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <p class="text-gray-400 mb-2">Lỗi tìm kiếm</p>
-                <p class="text-gray-500 text-sm">${error.message}</p>
-            </div>
-        `;
-    } finally {
-        isLoading = false;
+        console.error('Legacy search failed:', error);
+        throw error;
     }
 }
 

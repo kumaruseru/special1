@@ -1870,7 +1870,8 @@ const monitorActiveCalls = () => {
 };
 
 // Real conversations loading function
-window.loadRealConversations = function() {
+// Enhanced conversations loading with Telegram-inspired authentication
+window.loadRealConversations = async function() {
     console.log('🔄 Loading real conversations from API');
     
     const conversationsList = document.getElementById('conversations-list');
@@ -1887,19 +1888,75 @@ window.loadRealConversations = function() {
         </div>
     `;
 
+    try {
+        // Use Telegram-inspired auth manager
+        if (window.telegramAuth) {
+            console.log('🔐 TelegramAuth: Loading conversations with advanced authentication');
+            
+            const authState = window.telegramAuth.getAuthState();
+            console.log('🔍 TelegramAuth Conversations: Current state:', authState);
+            
+            if (!authState.isAuthenticated) {
+                console.log('❌ TelegramAuth Conversations: User not authenticated');
+                window.telegramAuth.handleAuthFailure();
+                return;
+            }
+
+            try {
+                // Make authenticated request using TelegramAuth
+                const response = await window.telegramAuth.makeAuthenticatedRequest('/api/conversations');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 TelegramAuth Conversations: API Response:', data);
+
+                    if (data.success && data.conversations && data.conversations.length > 0) {
+                        console.log('✅ Loaded conversations from API:', data.conversations.length);
+                        window.renderConversations(data.conversations);
+                        return;
+                    } else {
+                        console.log('📭 No conversations found, showing empty state');
+                        window.showEmptyConversationsState();
+                        return;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('❌ TelegramAuth Conversations: API request failed:', error);
+                throw error;
+            }
+        }
+
+        // Fallback to legacy method if TelegramAuth not available
+        console.log('⚠️ TelegramAuth not available for conversations, using fallback');
+        await loadRealConversationsLegacy();
+
+    } catch (error) {
+        console.error('❌ Error loading conversations:', error);
+        window.showEmptyConversationsState();
+    }
+};
+
+// Legacy conversations loading fallback
+async function loadRealConversationsLegacy() {
+    console.log('🔄 Using legacy conversations loading method');
+    
     // Try to load from API
     const token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
     
     if (token) {
-        fetch('/api/conversations', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+            const response = await fetch('/api/conversations', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
             if (data.success && data.conversations && data.conversations.length > 0) {
                 console.log('✅ Loaded conversations from API:', data.conversations.length);
                 window.renderConversations(data.conversations);
@@ -1907,16 +1964,15 @@ window.loadRealConversations = function() {
                 console.log('📭 No conversations found, showing empty state');
                 window.showEmptyConversationsState();
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('❌ Error loading conversations:', error);
             window.showEmptyConversationsState();
-        });
+        }
     } else {
         console.log('🔑 No auth token found, showing empty state');
         window.showEmptyConversationsState();
     }
-};
+}
 
 window.renderConversations = function(conversations) {
     const conversationsList = document.getElementById('conversations-list');
@@ -2017,6 +2073,15 @@ window.selectConversation = function(conversationId, userName, userAvatar) {
 // Start monitoring when page loads
 document.addEventListener('DOMContentLoaded', () => {
     console.log('=== DOM CONTENT LOADED ===');
+    
+    // Initialize Telegram-inspired authentication
+    if (typeof TelegramAuth !== 'undefined') {
+        console.log('🔐 Initializing TelegramAuth for Messages page');
+        window.telegramAuth = new TelegramAuth();
+        console.log('✅ TelegramAuth initialized successfully');
+    } else {
+        console.warn('⚠️ TelegramAuth class not available, falling back to legacy auth');
+    }
     
     // Initialize Real-time Messaging
     window.realTimeMessaging = new RealTimeMessaging();
