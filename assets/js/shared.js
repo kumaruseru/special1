@@ -286,4 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (logoutButton) {
         logoutButton.addEventListener('click', logout);
     }
+    
+    // Make tryRefreshToken globally available
+    window.tryRefreshToken = tryRefreshToken;
 });
