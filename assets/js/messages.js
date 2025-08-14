@@ -808,8 +808,11 @@ class RealTimeMessaging {
                 this.updateConnectionStatus(true);
                 
                 // Authenticate user for messaging
-                const token = localStorage.getItem('authToken');
+                const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+                console.log('Auth token found:', !!token);
+                
                 if (token) {
+                    console.log('Attempting to authenticate with token...');
                     this.socket.emit('authenticate', { token });
                 } else {
                     console.warn('No auth token found, using guest mode');
@@ -1204,6 +1207,15 @@ class RealTimeMessaging {
 
         const isOwn = message.senderId === this.currentUser.id;
         const isSystem = message.type === 'system';
+        
+        // Debug logging for message ownership
+        console.log('=== RENDER MESSAGE DEBUG ===');
+        console.log('Message senderId:', message.senderId);
+        console.log('Current user ID:', this.currentUser.id);
+        console.log('Is own message:', isOwn);
+        console.log('Message sender name:', message.senderName);
+        console.log('Current user name:', this.currentUser.name);
+        
         const timeStr = new Date(message.timestamp).toLocaleTimeString('vi-VN', {
             hour: '2-digit',
             minute: '2-digit'
