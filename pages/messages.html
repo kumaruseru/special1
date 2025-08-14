@@ -94,21 +94,23 @@
         <div id="main-content-wrapper" class="col-span-12 lg:col-span-9">
             <!-- Messages Page Content -->
             <main id="page-messages" class="page-content">
-                <div class="glass-pane rounded-2xl h-[calc(100vh-4rem)] flex">
+                <div class="glass-pane rounded-2xl messages-main-container">
                     <!-- Conversations List -->
-                    <div class="w-1/3 border-r border-gray-700/50 flex flex-col">
-                        <div class="p-4 border-b border-gray-700/50">
+                    <div class="conversations-list">
+                        <div class="conversations-header">
                             <h2 class="text-xl font-bold text-white">Tin nhắn</h2>
                         </div>
-                        <div class="flex-1 overflow-y-auto custom-scroll" id="conversations-list">
+                        <div class="conversations-content custom-scroll" id="conversations-list">
                             <!-- Conversations will be loaded from database -->
                         </div>
                     </div>
 
-                    <!-- Chat Window -->
-                    <div id="chat-window" class="w-2/3 chat-window hidden">
-                        <div class="chat-header" id="chat-header">
-                            <div class="flex items-center justify-between gap-4">
+                    <!-- Chat Area -->
+                    <div class="chat-area">
+                        <!-- Chat Window -->
+                        <div id="chat-window" class="hidden h-full">
+                            <!-- Chat Header -->
+                            <div class="flex items-center justify-between gap-4 p-4 border-b border-gray-700/50 flex-shrink-0" id="chat-header">
                                 <div class="flex items-center gap-4">
                                     <img id="chat-user-avatar" src="https://placehold.co/40x40/8A2BE2/FFFFFF?text=U" alt="User" class="w-10 h-10 rounded-full"/>
                                     <div>
@@ -117,56 +119,54 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button class="chat-action-btn" title="Gọi thoại">
+                                    <button class="chat-button" title="Gọi thoại">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                                     </button>
-                                    <button class="chat-action-btn" title="Gọi video">
+                                    <button class="chat-button" title="Gọi video">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                        <div class="messages-container custom-scroll chat-messages" id="messages-container">
-                            <!-- Messages will be loaded here -->
-                        </div>
-                        <div class="chat-footer chat-input-container">
-                            <div class="chat-input-wrapper">
-                                <input 
-                                    type="text" 
-                                    placeholder="Nhập tin nhắn..." 
-                                    class="message-input" 
-                                    id="message-input"
-                                    maxlength="1000"
-                                />
-                                <button class="chat-action-btn" title="Emoji" id="emoji-btn">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
-                                </button>
-                                <button class="chat-action-btn" title="Đính kèm file" id="attach-btn">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.59a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                                </button>
-                                <button class="send-button chat-action-btn" title="Gửi tin nhắn" id="send-btn">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                                </button>
+                            
+                            <!-- Messages Container -->
+                            <div class="messages-container custom-scroll" id="messages-container">
+                                <!-- Messages will be loaded here -->
+                            </div>
+                            
+                            <!-- Message Input Area -->
+                            <div class="chat-input-area">
+                                <div class="chat-input-container">
+                                    <input type="text" placeholder="Chọn cuộc trò chuyện để bắt đầu..." class="message-input" disabled/>
+                                    <button class="chat-button" title="Emoji">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                                    </button>
+                                    <button class="chat-button" title="Đính kèm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.59a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    </button>
+                                    <button class="main-button rounded-full p-2 send-button" title="Gửi tin nhắn">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Empty Chat Placeholder -->
-                    <div id="empty-chat-placeholder" class="w-2/3 flex items-center justify-center">
-                        <div class="text-center text-gray-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 opacity-50">
-                                <circle cx="11" cy="11" r="8"/>
-                                <path d="m21 21-4.3-4.3"/>
-                            </svg>
-                            <h3 class="text-xl font-semibold mb-2">Tìm bạn bè để trò chuyện</h3>
-                            <p class="text-sm mb-4">Hãy vào mục Khám phá để tìm và kết bạn với những người khác!</p>
-                            <a href="discovery.html" class="main-button px-6 py-2 rounded-full inline-flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- Empty Chat Placeholder -->
+                        <div id="empty-chat-placeholder" class="flex items-center justify-center h-full">
+                            <div class="text-center text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 opacity-50">
                                     <circle cx="11" cy="11" r="8"/>
                                     <path d="m21 21-4.3-4.3"/>
                                 </svg>
-                                Khám phá bạn bè
-                            </a>
+                                <h3 class="text-xl font-semibold mb-2">Tìm bạn bè để trò chuyện</h3>
+                                <p class="text-sm mb-4">Hãy vào mục Khám phá để tìm và kết bạn với những người khác!</p>
+                                <a href="discovery.html" class="main-button px-6 py-2 rounded-full inline-flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <path d="m21 21-4.3-4.3"/>
+                                    </svg>
+                                    Khám phá bạn bè
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
