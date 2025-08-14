@@ -57,6 +57,47 @@ main .glass-pane {
     display: none;
 }
 
+/* Messages Layout Fix */
+.glass-pane.rounded-2xl {
+    height: calc(100vh - 4rem);
+    display: flex;
+}
+
+/* Chat area should be flex column */
+.w-full.md\\:w-2\/3 {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#chat-window {
+    display: flex !important;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+/* Messages Container - should take remaining space */
+.flex-1.p-4.space-y-4.overflow-y-auto {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 1rem;
+}
+
+/* Message Input Area - should be at bottom */
+.p-4.border-t.border-gray-700\/50 {
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+/* Ensure the chat window container is flex */
+.w-full.md\\:w-2\/3.flex.flex-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
 /* Conversation Item Styles */
 .conversation-item {
     display: flex;
