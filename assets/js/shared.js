@@ -2,24 +2,53 @@
 
 // Load user info from localStorage
 function loadUserInfo() {
-    // Try both userInfo (new) and userData (from login)
+    console.log('🔍 Loading user info...');
+    
+    // Try all possible user data sources
     let userInfo = localStorage.getItem('userInfo') || localStorage.getItem('userData');
+    let userName = localStorage.getItem('userName');
+    let userEmail = localStorage.getItem('userEmail');
+    
+    console.log('Available user data:', {
+        userInfo: !!userInfo,
+        userName: userName,
+        userEmail: userEmail,
+        localStorage_keys: Object.keys(localStorage)
+    });
+    
     if (userInfo) {
         try {
             const user = JSON.parse(userInfo);
+            console.log('Parsed user object:', user);
             
             // Update user name
             const userNameEl = document.getElementById('user-name');
-            if (userNameEl && user.firstName && user.lastName) {
-                userNameEl.textContent = `${user.firstName} ${user.lastName}`;
-            } else if (userNameEl && user.fullName) {
-                userNameEl.textContent = user.fullName;
+            if (userNameEl) {
+                let displayName = 'Loading...';
+                if (user.firstName && user.lastName) {
+                    displayName = `${user.firstName} ${user.lastName}`;
+                } else if (user.fullName) {
+                    displayName = user.fullName;
+                } else if (user.name) {
+                    displayName = user.name;
+                } else if (userName) {
+                    displayName = userName;
+                }
+                userNameEl.textContent = displayName;
+                console.log('✅ Updated user name to:', displayName);
             }
             
             // Update user email
             const userEmailEl = document.getElementById('user-email');
-            if (userEmailEl && user.email) {
-                userEmailEl.textContent = `@${user.email.split('@')[0]}`;
+            if (userEmailEl) {
+                let displayEmail = '@user';
+                if (user.email) {
+                    displayEmail = `@${user.email.split('@')[0]}`;
+                } else if (userEmail) {
+                    displayEmail = `@${userEmail.split('@')[0]}`;
+                }
+                userEmailEl.textContent = displayEmail;
+                console.log('✅ Updated user email to:', displayEmail);
             }
             
             // Update user avatar with first letter
@@ -30,14 +59,34 @@ function loadUserInfo() {
                     firstLetter = user.firstName.charAt(0).toUpperCase();
                 } else if (user.fullName) {
                     firstLetter = user.fullName.charAt(0).toUpperCase();
+                } else if (user.name) {
+                    firstLetter = user.name.charAt(0).toUpperCase();
                 } else if (user.email) {
                     firstLetter = user.email.charAt(0).toUpperCase();
+                } else if (userEmail) {
+                    firstLetter = userEmail.charAt(0).toUpperCase();
                 }
                 userAvatarEl.src = `https://placehold.co/48x48/4F46E5/FFFFFF?text=${firstLetter}`;
+                console.log('✅ Updated avatar with letter:', firstLetter);
             }
             
         } catch (error) {
-            console.error('Error parsing user info:', error);
+            console.error('❌ Error parsing user info:', error);
+        }
+    } else {
+        console.warn('⚠️ No user info found in localStorage');
+        // Still try to use individual fields if available
+        const userNameEl = document.getElementById('user-name');
+        const userEmailEl = document.getElementById('user-email');
+        
+        if (userNameEl && userName) {
+            userNameEl.textContent = userName;
+            console.log('✅ Fallback: Updated user name to:', userName);
+        }
+        
+        if (userEmailEl && userEmail) {
+            userEmailEl.textContent = `@${userEmail.split('@')[0]}`;
+            console.log('✅ Fallback: Updated user email');
         }
     }
 }
@@ -142,6 +191,5 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoutButton = document.querySelector('.logout-button');
     if (logoutButton) {
         logoutButton.addEventListener('click', logout);
-    }
     }
 });
