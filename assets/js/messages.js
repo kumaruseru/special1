@@ -183,12 +183,21 @@ class RealTimeMessaging {
         try {
             console.log(`📹 Initiating video call to ${userName} (${userId})`);
             
+            // Make sure we have a valid current user with real ID
+            if (!this.currentUser || !this.currentUser.id || this.currentUser.id.startsWith('user_') || this.currentUser.id.startsWith('guest_')) {
+                console.error('❌ Cannot initiate call: Invalid current user', this.currentUser);
+                this.showNotification('Vui lòng đăng nhập để sử dụng tính năng gọi điện', 'error');
+                return;
+            }
+            
             // Store call info for the call window
             const callInfo = {
                 type: 'video',
                 contact: userName,
                 state: 'outgoing',
-                targetUserId: userId
+                targetUserId: userId,
+                callerId: this.currentUser.id,
+                callerName: this.currentUser.name
             };
             
             localStorage.setItem('currentCall', JSON.stringify(callInfo));
@@ -224,12 +233,21 @@ class RealTimeMessaging {
         try {
             console.log(`📞 Initiating voice call to ${userName} (${userId})`);
             
+            // Make sure we have a valid current user with real ID
+            if (!this.currentUser || !this.currentUser.id || this.currentUser.id.startsWith('user_') || this.currentUser.id.startsWith('guest_')) {
+                console.error('❌ Cannot initiate call: Invalid current user', this.currentUser);
+                this.showNotification('Vui lòng đăng nhập để sử dụng tính năng gọi điện', 'error');
+                return;
+            }
+            
             // Store call info for the call window
             const callInfo = {
                 type: 'voice',
                 contact: userName,
                 state: 'outgoing',
-                targetUserId: userId
+                targetUserId: userId,
+                callerId: this.currentUser.id,
+                callerName: this.currentUser.name
             };
             
             localStorage.setItem('currentCall', JSON.stringify(callInfo));
@@ -827,13 +845,39 @@ class RealTimeMessaging {
                 const user = JSON.parse(userData);
                 console.log('Using currentUser from localStorage:', user);
                 
-                // Check if it's a temporary user and needs to be updated
-                if (user.id && !user.id.startsWith('user_')) {
-                    return user; // Real user
-                } else {
-                    console.log('Found temporary user, will need to authenticate properly');
-                    // Don't clear it yet, let the user authenticate first
+                // If it's a temporary user, try to get real user data first
+                if (user.id && user.id.startsWith('user_') || user.id.startsWith('guest_')) {
+                    console.warn('Found temporary user, attempting to get real user data');
+                    
+                    // Try to get userInfo for real user data
+                    const userInfoStr = localStorage.getItem('userInfo');
+                    if (userInfoStr) {
+                        try {
+                            const realUserInfo = JSON.parse(userInfoStr);
+                            if (realUserInfo._id || realUserInfo.id) {
+                                console.log('Upgrading to real user data:', realUserInfo);
+                                const realUser = {
+                                    id: realUserInfo._id || realUserInfo.id,
+                                    name: realUserInfo.name || realUserInfo.fullName || realUserInfo.username,
+                                    username: realUserInfo.username || realUserInfo.name,
+                                    email: realUserInfo.email,
+                                    avatar: realUserInfo.avatar || realUserInfo.profilePicture || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${(realUserInfo.name || 'U').charAt(0).toUpperCase()}`,
+                                    joinedAt: realUserInfo.createdAt || Date.now()
+                                };
+                                
+                                // Update localStorage with real user data
+                                localStorage.setItem('currentUser', JSON.stringify(realUser));
+                                return realUser;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing real user info:', e);
+                        }
+                    }
+                    
+                    // Keep temporary user for now
                     return user;
+                } else {
+                    return user; // Real user
                 }
             } catch (error) {
                 console.error('Error parsing currentUser:', error);
@@ -1276,16 +1320,33 @@ class RealTimeMessaging {
     }
 
     receiveMessage(messageData) {
+        // Validate message data before processing
+        if (!messageData) {
+            console.error('Received empty message data');
+            return;
+        }
+        
+        // Ensure required fields exist
+        const senderId = messageData.senderId || messageData.userId;
+        const senderName = messageData.senderName || messageData.username || 'Unknown User';
+        
+        if (!senderId) {
+            console.error('Message missing senderId:', messageData);
+            return;
+        }
+        
         const message = {
-            id: messageData.id,
-            senderId: messageData.senderId,
-            senderName: messageData.senderName,
-            senderAvatar: messageData.senderAvatar,
-            text: messageData.text,
-            timestamp: messageData.timestamp,
-            type: messageData.type,
+            id: messageData.id || messageData.messageId || 'msg_' + Date.now(),
+            senderId: senderId,
+            senderName: senderName,
+            senderAvatar: messageData.senderAvatar || messageData.avatar || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${senderName.charAt(0).toUpperCase()}`,
+            text: messageData.text || messageData.message || '',
+            timestamp: messageData.timestamp || Date.now(),
+            type: messageData.type || 'text',
             status: 'received'
         };
+
+        console.log('Processing received message:', message);
 
         this.messages.push(message);
         this.renderMessage(message);
