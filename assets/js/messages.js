@@ -1439,45 +1439,72 @@ class CallManager {
     }
 
     initializeEventListeners() {
-        // Voice call button
-        document.getElementById('voice-call-btn').addEventListener('click', () => {
-            this.initiateCall('voice');
-        });
+        // Voice call button - check if exists first
+        const voiceCallBtn = document.getElementById('voice-call-btn');
+        if (voiceCallBtn) {
+            voiceCallBtn.addEventListener('click', () => {
+                this.initiateCall('voice');
+            });
+        }
 
-        // Video call button
-        document.getElementById('video-call-btn').addEventListener('click', () => {
-            this.initiateCall('video');
-        });
+        // Video call button - check if exists first
+        const videoCallBtn = document.getElementById('video-call-btn');
+        if (videoCallBtn) {
+            videoCallBtn.addEventListener('click', () => {
+                this.initiateCall('video');
+            });
+        }
 
-        // Voice call controls
-        document.getElementById('mute-btn').addEventListener('click', () => {
-            this.toggleMute();
-        });
+        // Voice call controls - check if exists first
+        const muteBtn = document.getElementById('mute-btn');
+        if (muteBtn) {
+            muteBtn.addEventListener('click', () => {
+                this.toggleMute();
+            });
+        }
 
-        document.getElementById('speaker-btn').addEventListener('click', () => {
-            this.toggleSpeaker();
-        });
+        const speakerBtn = document.getElementById('speaker-btn');
+        if (speakerBtn) {
+            speakerBtn.addEventListener('click', () => {
+                this.toggleSpeaker();
+            });
+        }
 
-        document.getElementById('end-call-btn').addEventListener('click', () => {
-            this.endCall();
-        });
+        const endCallBtn = document.getElementById('end-call-btn');
+        if (endCallBtn) {
+            endCallBtn.addEventListener('click', () => {
+                this.endCall();
+            });
+        }
 
-        // Video call controls
-        document.getElementById('video-mute-btn').addEventListener('click', () => {
-            this.toggleMute();
-        });
+        // Video call controls - check if exists first
+        const videoMuteBtn = document.getElementById('video-mute-btn');
+        if (videoMuteBtn) {
+            videoMuteBtn.addEventListener('click', () => {
+                this.toggleMute();
+            });
+        }
 
-        document.getElementById('camera-toggle-btn').addEventListener('click', () => {
-            this.toggleCamera();
-        });
+        const cameraToggleBtn = document.getElementById('camera-toggle-btn');
+        if (cameraToggleBtn) {
+            cameraToggleBtn.addEventListener('click', () => {
+                this.toggleCamera();
+            });
+        }
 
-        document.getElementById('screen-share-btn').addEventListener('click', () => {
-            this.toggleScreenShare();
-        });
+        const screenShareBtn = document.getElementById('screen-share-btn');
+        if (screenShareBtn) {
+            screenShareBtn.addEventListener('click', () => {
+                this.toggleScreenShare();
+            });
+        }
 
-        document.getElementById('video-end-call-btn').addEventListener('click', () => {
-            this.endCall();
-        });
+        const videoEndCallBtn = document.getElementById('video-end-call-btn');
+        if (videoEndCallBtn) {
+            videoEndCallBtn.addEventListener('click', () => {
+                this.endCall();
+            });
+        }
     }
 
     // New method to initiate call and open in new tab
@@ -1800,8 +1827,8 @@ class CallManager {
     }
 }
 
-// Initialize Call Manager
-const callManager = new CallManager();
+// Initialize Call Manager after DOM is loaded
+let callManager = null;
 
 // Monitor active calls
 const monitorActiveCalls = () => {
@@ -1855,6 +1882,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     document.body.appendChild(debugButton);
+    
+    // Initialize Call Manager after DOM is ready
+    callManager = new CallManager();
     
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
