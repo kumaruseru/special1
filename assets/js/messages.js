@@ -282,7 +282,7 @@ class RealTimeMessaging {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken')}`
                 }
             });
 
@@ -387,7 +387,7 @@ class RealTimeMessaging {
         try {
             const response = await fetch(`/api/conversations/${userId}/messages`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken')}`
                 }
             });
 
@@ -407,14 +407,41 @@ class RealTimeMessaging {
                 }
             } else {
                 console.error('Failed to load messages:', response.status);
-                this.messages = [];
-                this.renderAllMessages();
+                // Fallback: Show empty conversation ready for new messages
+                this.showEmptyConversationFallback(userId);
             }
         } catch (error) {
             console.error('Error loading messages:', error);
-            this.messages = [];
-            this.renderAllMessages();
+            // Fallback: Show empty conversation ready for new messages
+            this.showEmptyConversationFallback(userId);
         }
+    }
+
+    showEmptyConversationFallback(userId) {
+        console.log('Showing empty conversation fallback for user:', userId);
+        
+        this.messages = [];
+        this.renderAllMessages();
+        
+        // Add a system message
+        const welcomeMessage = {
+            id: 'system_' + Date.now(),
+            text: 'Cuộc trò chuyện mới bắt đầu. API tạm thời không khả dụng, tin nhắn sẽ chỉ hiển thị trong phiên này.',
+            timestamp: Date.now(),
+            type: 'system'
+        };
+        
+        this.messages.push(welcomeMessage);
+        this.renderMessage(welcomeMessage);
+        
+        // Enable message input
+        const messageInput = document.getElementById('message-input');
+        if (messageInput) {
+            messageInput.disabled = false;
+            messageInput.placeholder = 'Nhập tin nhắn...';
+        }
+        
+        this.scrollToBottom();
     }
 
     formatMessageTime(date) {
@@ -846,9 +873,13 @@ class RealTimeMessaging {
         // Initialize real Socket.IO connection
         try {
             this.socket = io({
-                transports: ['websocket', 'polling'],
-                timeout: 10000,
-                forceNew: true
+                transports: ['polling', 'websocket'], // Try polling first, then websocket
+                timeout: 20000, // Increase timeout
+                forceNew: true,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 3,
+                maxReconnectionAttempts: 3
             });
 
             // Connection events
@@ -885,6 +916,14 @@ class RealTimeMessaging {
                 console.error('Socket connection error:', error);
                 this.isConnected = false;
                 this.updateConnectionStatus(false);
+                
+                // After 3 failed attempts, switch to fallback
+                if (this.connectionAttempts >= 3) {
+                    console.log('❌ Socket connection failed multiple times, switching to fallback');
+                    this.socket.disconnect();
+                    this.initializeFallbackMessaging();
+                }
+                this.connectionAttempts = (this.connectionAttempts || 0) + 1;
             });
 
             // Authentication response
