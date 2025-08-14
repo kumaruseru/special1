@@ -546,7 +546,17 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
-app.use(express.static('.'));
+
+// Enhanced static file serving for production
+app.use('/assets', express.static(path.join(__dirname, 'assets'), {
+    maxAge: '1d', // Cache for 1 day
+    etag: true
+}));
+app.use('/pages', express.static(path.join(__dirname, 'pages')));
+app.use('/components', express.static(path.join(__dirname, 'components')));
+app.use(express.static(path.join(__dirname), {
+    maxAge: '1h' // Cache for 1 hour
+}));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -1006,6 +1016,18 @@ app.post('/api/posts', authenticateToken, async (req, res) => {
 // Serve static files
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Health check route for Render
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        mongodb: mongoConnection ? 'Connected' : 'Disconnected',
+        socketio: 'Active',
+        environment: process.env.NODE_ENV || 'development'
+    });
 });
 
 // Catch all other routes and serve index.html (for SPA)

@@ -1347,15 +1347,20 @@ class CallManager {
     }
 
     initializeEventListeners() {
-        // Voice call button
-        document.getElementById('voice-call-btn').addEventListener('click', () => {
-            this.initiateCall('voice');
-        });
+        // Check if elements exist before adding listeners
+        const voiceCallBtn = document.getElementById('voice-call-btn');
+        if (voiceCallBtn) {
+            voiceCallBtn.addEventListener('click', () => {
+                this.initiateCall('voice');
+            });
+        }
 
-        // Video call button
-        document.getElementById('video-call-btn').addEventListener('click', () => {
-            this.initiateCall('video');
-        });
+        const videoCallBtn = document.getElementById('video-call-btn');
+        if (videoCallBtn) {
+            videoCallBtn.addEventListener('click', () => {
+                this.initiateCall('video');
+            });
+        }
 
         // Voice call controls
         document.getElementById('mute-btn').addEventListener('click', () => {
@@ -1708,8 +1713,13 @@ class CallManager {
     }
 }
 
-// Initialize Call Manager
-const callManager = new CallManager();
+// Initialize Call Manager safely
+let callManager = null;
+try {
+    callManager = new CallManager();
+} catch (error) {
+    console.warn('⚠️ CallManager initialization failed:', error.message);
+}
 
 // Monitor active calls
 const monitorActiveCalls = () => {
