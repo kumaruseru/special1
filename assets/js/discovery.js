@@ -177,9 +177,9 @@ async function loadSuggestedUsers() {
                 console.log('API without auth failed:', error.message);
             }
             
-            // Fallback to mock users if API fails
-            console.log('🔄 Falling back to mock users');
-            showMockUsers();
+            // Show error message instead of mock data
+            console.log('❌ API failed, showing error');
+            showSearchError('Không thể tải danh sách người dùng. Vui lòng đăng nhập.');
             return;
         }
         
@@ -202,8 +202,8 @@ async function loadSuggestedUsers() {
         
         if (!response.ok) {
             console.error('❌ API request failed:', response.status, response.statusText);
-            // If API fails, show mock users instead of login required
-            showMockUsers();
+            // Show error message instead of mock data
+            showSearchError('Không thể tải danh sách người dùng. Vui lòng thử lại sau.');
             return;
         }
 
@@ -313,33 +313,23 @@ function showLoginRequired() {
     `;
 }
 
-function showMockUsers() {
-    console.log('📋 Showing mock users due to API unavailability');
-    const mockUsers = [
-        {
-            id: 'mock_1',
-            firstName: 'Alice',
-            lastName: 'Johnson',
-            email: 'alice@example.com',
-            avatar: 'https://placehold.co/80x80/4F46E5/FFFFFF?text=A'
-        },
-        {
-            id: 'mock_2', 
-            firstName: 'Bob',
-            lastName: 'Smith',
-            email: 'bob@example.com',
-            avatar: 'https://placehold.co/80x80/10B981/FFFFFF?text=B'
-        },
-        {
-            id: 'mock_3',
-            firstName: 'Carol',
-            lastName: 'Davis',
-            email: 'carol@example.com', 
-            avatar: 'https://placehold.co/80x80/F59E0B/FFFFFF?text=C'
-        }
-    ];
-    
-    displaySearchResults(mockUsers, null, 'Gợi ý cho bạn (Demo)');
+function showSearchError(errorMessage) {
+    console.log('❌ Showing search error:', errorMessage);
+    const searchResults = document.getElementById('search-results');
+    if (searchResults) {
+        searchResults.innerHTML = `
+            <div class="text-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 text-red-500">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p class="text-gray-400 mb-2">Không thể tải dữ liệu</p>
+                <p class="text-gray-500 text-sm">${errorMessage}</p>
+                <button onclick="loadSuggestedUsers()" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">
+                    Thử lại
+                </button>
+            </div>
+        `;
+    }
 }
 
 function displaySearchResults(results, query, title = 'Kết quả tìm kiếm') {
