@@ -28,8 +28,13 @@ const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
-    }
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000
 });
 
 const PORT = process.env.PORT || 3001;
@@ -1893,11 +1898,40 @@ const activeCalls = new Map(); // callId -> call data
 io.on('connection', (socket) => {
     console.log('🔌 User connected:', socket.id);
 
+    // Add error handling for socket
+    socket.on('error', (error) => {
+        console.error('Socket error:', error);
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log(`🔌 User disconnected: ${socket.id}, reason: ${reason}`);
+        
+        // Clean up user from active users
+        if (socket.userId) {
+            activeUsers.delete(socket.userId);
+            console.log(`👤 Removed user from active list: ${socket.userId}`);
+        }
+        
+        // Notify others about user leaving
+        if (socket.username) {
+            socket.to('global_chat').emit('user_left', {
+                userId: socket.userId,
+                username: socket.username
+            });
+        }
+    });
+
+    socket.on('connect_error', (error) => {
+        console.error('Socket connect error:', error);
+    });
+
     // Handle authentication from client
     socket.on('authenticate', async (data) => {
         try {
+            console.log('🔐 Authentication attempt from:', socket.id);
             const { token } = data;
             if (!token) {
+                console.log('❌ No token provided');
                 socket.emit('authentication_failed', { error: 'No token provided' });
                 return;
             }
@@ -1906,9 +1940,12 @@ io.on('connection', (socket) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cosmic-social-secret-2024');
             const userId = decoded.userId || decoded.id;
             
+            console.log('✅ Token decoded, userId:', userId);
+            
             // Find user in database
             const user = await User.findById(userId);
             if (!user) {
+                console.log('❌ User not found in database:', userId);
                 socket.emit('authentication_failed', { error: 'User not found' });
                 return;
             }
@@ -1935,9 +1972,12 @@ io.on('connection', (socket) => {
                 isAuthenticated: true
             });
 
+            // Join authenticated users room
+            socket.join('authenticated_users');
+
         } catch (error) {
             console.error('Authentication error:', error);
-            socket.emit('authentication_failed', { error: 'Invalid token' });
+            socket.emit('authentication_failed', { error: 'Invalid token: ' + error.message });
         }
     });
 
@@ -1945,64 +1985,108 @@ io.on('connection', (socket) => {
     
     // Join chat room (guest or authenticated)
     socket.on('join_chat', (data) => {
-        const { userId, username, avatar } = data;
-        socket.userId = userId;
-        socket.username = username;
-        socket.avatar = avatar;
-        
-        // Join global chat room
-        socket.join('global_chat');
-        activeUsers.set(userId, { 
-            socketId: socket.id, 
-            username, 
-            avatar,
-            isAuthenticated: false 
-        });
-        
-        console.log(`💬 User joined chat: ${username} (Guest)`);
-        
-        // Notify others about new user
-        socket.to('global_chat').emit('user_joined', {
-            userId,
-            username,
-            avatar
-        });
-        
-        // Send current online users
-        const onlineUsersList = Array.from(activeUsers.entries()).map(([id, user]) => ({
-            userId: id,
-            username: user.username,
-            avatar: user.avatar,
-            isAuthenticated: user.isAuthenticated
-        }));
-        
-        socket.emit('online_users_update', onlineUsersList);
+        try {
+            const { userId, username, avatar } = data;
+            
+            if (!userId || !username) {
+                console.error('❌ Invalid join_chat data:', data);
+                socket.emit('join_error', { error: 'Missing userId or username' });
+                return;
+            }
+            
+            socket.userId = userId;
+            socket.username = username;
+            socket.avatar = avatar;
+            
+            // Join global chat room
+            socket.join('global_chat');
+            activeUsers.set(userId, { 
+                socketId: socket.id, 
+                username, 
+                avatar,
+                isAuthenticated: false 
+            });
+            
+            console.log(`💬 User joined chat: ${username} (Guest) - ${socket.id}`);
+            
+            // Notify others about new user
+            socket.to('global_chat').emit('user_joined', {
+                userId,
+                username,
+                avatar
+            });
+            
+            // Send current online users
+            const onlineUsersList = Array.from(activeUsers.entries()).map(([id, user]) => ({
+                userId: id,
+                username: user.username,
+                avatar: user.avatar,
+                isAuthenticated: user.isAuthenticated
+            }));
+            
+            socket.emit('online_users_update', onlineUsersList);
+            socket.emit('join_success', { message: 'Successfully joined chat' });
+            
+        } catch (error) {
+            console.error('Error in join_chat:', error);
+            socket.emit('join_error', { error: error.message });
+        }
     });
     
     // Send message
     socket.on('send_message', (data) => {
-        const { messageId, text, timestamp, chatId } = data;
-        
-        if (!socket.userId) {
-            socket.emit('message_error', { error: 'User not authenticated for chat' });
-            return;
+        try {
+            const { messageId, text, timestamp, chatId } = data;
+            
+            console.log('📨 Send message request:', {
+                messageId,
+                text: text ? text.substring(0, 50) + '...' : 'empty',
+                timestamp,
+                chatId,
+                socketId: socket.id,
+                userId: socket.userId,
+                username: socket.username
+            });
+            
+            if (!socket.userId) {
+                console.error('❌ Message rejected: User not authenticated');
+                socket.emit('message_error', { error: 'User not authenticated for chat' });
+                return;
+            }
+            
+            if (!text || text.trim() === '') {
+                console.error('❌ Message rejected: Empty text');
+                socket.emit('message_error', { error: 'Message text cannot be empty' });
+                return;
+            }
+            
+            const messageData = {
+                id: messageId || 'msg_' + Date.now(),
+                senderId: socket.userId,
+                senderName: socket.username || 'Unknown User',
+                senderAvatar: socket.avatar || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${(socket.username || 'U').charAt(0).toUpperCase()}`,
+                text: text.trim(),
+                timestamp: timestamp || Date.now(),
+                type: 'text',
+                status: 'sent'
+            };
+            
+            console.log(`✅ Broadcasting message from ${socket.username} to global_chat`);
+            
+            // Broadcast to all users in chat room (except sender)
+            socket.to('global_chat').emit('new_message', messageData);
+            
+            // Confirm to sender
+            socket.emit('message_sent', { 
+                messageId: messageData.id,
+                status: 'sent' 
+            });
+            
+        } catch (error) {
+            console.error('Error in send_message:', error);
+            socket.emit('message_error', { error: error.message });
         }
-        
-        const messageData = {
-            id: messageId,
-            senderId: socket.userId,
-            senderName: socket.username,
-            senderAvatar: socket.avatar,
-            text: text,
-            timestamp: timestamp,
-            type: 'text',
-            status: 'sent'
-        };
-        
-        console.log(`💬 Message from ${socket.username}: ${text}`);
-        
-        // Broadcast to all users in chat room (except sender)
-        socket.to('global_chat').emit('new_message', messageData);
+    });
         
         // Confirm message sent to sender
         socket.emit('message_sent', { messageId, status: 'sent' });
@@ -2290,6 +2374,12 @@ io.on('connection', (socket) => {
         
         console.log('🔌 User disconnected:', socket.id);
     });
+
+    // === WebRTC Call Management ===
+    
+    // All WebRTC event handlers here...
+    // (existing call handlers remain unchanged)
+    
 });
 
 // Start server
