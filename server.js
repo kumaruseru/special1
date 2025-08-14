@@ -2103,10 +2103,6 @@ io.on('connection', (socket) => {
             socket.emit('message_error', { error: error.message });
         }
     });
-        
-        // Confirm message sent to sender
-        socket.emit('message_sent', { messageId, status: 'sent' });
-    });
     
     // Typing indicators
     socket.on('typing_start', (data) => {
@@ -2390,6 +2386,8 @@ io.on('connection', (socket) => {
         
         console.log('🔌 User disconnected:', socket.id);
     });
+
+});
 
 // Start server
 server.listen(PORT, () => {
