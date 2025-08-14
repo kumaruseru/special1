@@ -1874,6 +1874,15 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Debug route for Socket.IO status
+app.get('/socket-status', (req, res) => {
+    res.json({
+        socketIO: 'Socket.IO server is running',
+        timestamp: new Date().toISOString(),
+        port: PORT
+    });
+});
+
 // Serve pages directory specifically 
 app.use('/pages', express.static(path.join(__dirname, 'pages')));
 

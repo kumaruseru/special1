@@ -834,6 +834,15 @@ class RealTimeMessaging {
     }
 
     initializeWebSocket() {
+        console.log('=== INITIALIZING WEBSOCKET ===');
+        
+        // Check if Socket.IO is available
+        if (typeof io === 'undefined') {
+            console.error('❌ Socket.IO not loaded, using fallback messaging');
+            this.initializeFallbackMessaging();
+            return;
+        }
+        
         // Initialize real Socket.IO connection
         try {
             this.socket = io({
