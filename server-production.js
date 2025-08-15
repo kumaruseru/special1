@@ -241,32 +241,123 @@ io.on('connection', (socket) => {
     });
     
     // Send message
-    socket.on('send_message', (data) => {
-        const { messageId, text, timestamp, chatId } = data;
+    socket.on('send_message', async (data) => {
+        const { messageId, text, timestamp, chatId, recipientId } = data;
         
         if (!socket.userId) {
             socket.emit('message_error', { error: 'User not authenticated for chat' });
             return;
         }
         
-        const messageData = {
-            id: messageId,
-            senderId: socket.userId,
-            senderName: socket.username,
-            senderAvatar: socket.avatar,
-            text: text,
-            timestamp: timestamp,
-            type: 'text',
-            status: 'sent'
-        };
-        
-        console.log(`💬 Message from ${socket.username}: ${text}`);
-        
-        // Broadcast to all users in chat room (except sender)
-        socket.to('global_chat').emit('new_message', messageData);
-        
-        // Confirm message sent to sender
-        socket.emit('message_sent', { messageId, status: 'sent' });
+        try {
+            // Create message data
+            const messageData = {
+                id: messageId,
+                senderId: socket.userId,
+                senderName: socket.username || 'Unknown User',
+                senderAvatar: socket.avatar || null,
+                text: text,
+                timestamp: timestamp,
+                type: 'text',
+                status: 'sent',
+                conversationId: chatId || recipientId || 'general'
+            };
+            
+            console.log(`💬 Message from ${socket.username}: ${text}`);
+            
+            // Save to database if MongoDB is available
+            if (mongoConnection && chatId) {
+                try {
+                    const db = mongoConnection.db();
+                    const messagesCollection = db.collection('messages');
+                    const conversationsCollection = db.collection('conversations');
+                    
+                    // Save message to database
+                    const dbMessageData = {
+                        conversationId: chatId,
+                        text: text,
+                        senderId: socket.userId,
+                        senderName: socket.username || 'Unknown User',
+                        senderAvatar: socket.avatar || null,
+                        timestamp: new Date(timestamp),
+                        type: 'text'
+                    };
+                    
+                    const result = await messagesCollection.insertOne(dbMessageData);
+                    console.log('💾 Message saved to database:', result.insertedId);
+                    
+                    // Update conversation last message
+                    await conversationsCollection.updateOne(
+                        { _id: new ObjectId(chatId) },
+                        {
+                            $set: {
+                                lastMessage: {
+                                    text: text,
+                                    senderId: socket.userId,
+                                    senderName: socket.username || 'Unknown User',
+                                    timestamp: new Date(timestamp)
+                                },
+                                lastMessageTime: new Date(timestamp)
+                            }
+                        },
+                        { upsert: true }
+                    );
+                    
+                    messageData.id = result.insertedId.toString();
+                    
+                } catch (dbError) {
+                    console.error('❌ Database save error:', dbError);
+                }
+            }
+            
+            // Broadcast to all users in the conversation
+            if (chatId) {
+                socket.to(chatId).emit('new_message', messageData);
+                socket.to(chatId).emit('message', messageData);
+                socket.to(chatId).emit('broadcast_message', messageData);
+            } else {
+                // Fallback to global chat
+                socket.to('global_chat').emit('new_message', messageData);
+            }
+            
+            // Confirm message sent to sender
+            socket.emit('message_sent', { messageId, status: 'sent', savedId: messageData.id });
+            
+        } catch (error) {
+            console.error('❌ Send message error:', error);
+            socket.emit('message_error', { error: 'Failed to send message' });
+        }
+    });
+    
+    // Room management for conversations
+    socket.on('join_room', (data) => {
+        const { roomId } = data;
+        if (roomId && socket.userId) {
+            socket.join(roomId);
+            console.log(`👥 User ${socket.username} joined room: ${roomId}`);
+            
+            // Notify others in the room that user joined
+            socket.to(roomId).emit('user_joined_room', {
+                userId: socket.userId,
+                username: socket.username,
+                roomId: roomId
+            });
+        }
+    });
+    
+    socket.on('leave_room', (data) => {
+        const { roomId } = data;
+        if (roomId && socket.userId) {
+            socket.leave(roomId);
+            console.log(`👋 User ${socket.username} left room: ${roomId}`);
+            
+            // Notify others in the room that user left
+            socket.to(roomId).emit('user_left_room', {
+                userId: socket.userId,
+                username: socket.username,
+                roomId: roomId
+            });
+        }
     });
     
     // Typing indicators
@@ -1256,6 +1347,177 @@ app.post('/api/conversations', authenticateToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error creating conversation'
+        });
+    }
+});
+
+// Get messages for a conversation
+app.get('/api/conversations/:conversationId/messages', authenticateToken, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { since, limit = 50 } = req.query;
+        
+        console.log('📨 Getting messages for conversation:', conversationId);
+        
+        if (!mongoConnection) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        const db = mongoConnection.db();
+        const messagesCollection = db.collection('messages');
+        const conversationsCollection = db.collection('conversations');
+        
+        // Verify user has access to this conversation
+        const conversation = await conversationsCollection.findOne({
+            _id: new ObjectId(conversationId),
+            participantIds: req.user.id
+        });
+        
+        if (!conversation) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied'
+            });
+        }
+        
+        // Build query
+        let query = { conversationId: conversationId };
+        if (since) {
+            query.timestamp = { $gt: new Date(parseInt(since)) };
+        }
+        
+        // Get messages
+        const messages = await messagesCollection
+            .find(query)
+            .sort({ timestamp: -1 })
+            .limit(parseInt(limit))
+            .toArray();
+        
+        // Format messages
+        const formattedMessages = messages.reverse().map(msg => ({
+            id: msg._id.toString(),
+            text: msg.text,
+            senderId: msg.senderId,
+            senderName: msg.senderName,
+            senderAvatar: msg.senderAvatar,
+            timestamp: msg.timestamp,
+            type: msg.type || 'text'
+        }));
+        
+        res.json({
+            success: true,
+            messages: formattedMessages
+        });
+        
+    } catch (error) {
+        console.error('❌ Get messages error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting messages'
+        });
+    }
+});
+
+// Send message to a conversation
+app.post('/api/conversations/:conversationId/messages', authenticateToken, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { text, type = 'text' } = req.body;
+        
+        console.log('💬 Sending message to conversation:', conversationId);
+        
+        if (!mongoConnection) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not available'
+            });
+        }
+
+        if (!text || text.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'Message text is required'
+            });
+        }
+
+        const db = mongoConnection.db();
+        const messagesCollection = db.collection('messages');
+        const conversationsCollection = db.collection('conversations');
+        const usersCollection = db.collection('users');
+        
+        // Verify user has access to this conversation
+        const conversation = await conversationsCollection.findOne({
+            _id: new ObjectId(conversationId),
+            participantIds: req.user.id
+        });
+        
+        if (!conversation) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied'
+            });
+        }
+        
+        // Get sender info
+        const sender = await usersCollection.findOne({
+            _id: new ObjectId(req.user.id)
+        });
+        
+        // Create message
+        const messageData = {
+            conversationId: conversationId,
+            text: text.trim(),
+            senderId: req.user.id,
+            senderName: sender?.name || sender?.username || 'Unknown User',
+            senderAvatar: sender?.avatar || null,
+            timestamp: new Date(),
+            type: type
+        };
+        
+        // Save message to database
+        const result = await messagesCollection.insertOne(messageData);
+        
+        // Update conversation last message
+        await conversationsCollection.updateOne(
+            { _id: new ObjectId(conversationId) },
+            {
+                $set: {
+                    lastMessage: {
+                        text: text.trim(),
+                        senderId: req.user.id,
+                        senderName: messageData.senderName,
+                        timestamp: messageData.timestamp
+                    },
+                    lastMessageTime: messageData.timestamp
+                }
+            }
+        );
+        
+        // Format message for response
+        const savedMessage = {
+            id: result.insertedId.toString(),
+            ...messageData,
+            timestamp: messageData.timestamp.toISOString()
+        };
+        
+        // Emit to Socket.IO clients
+        io.to(conversationId).emit('new_message', savedMessage);
+        io.to(conversationId).emit('message', savedMessage);
+        io.to(conversationId).emit('broadcast_message', savedMessage);
+        
+        res.json({
+            success: true,
+            message: savedMessage
+        });
+        
+    } catch (error) {
+        console.error('❌ Send message error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error sending message'
         });
     }
 });

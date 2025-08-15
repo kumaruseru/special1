@@ -235,15 +235,106 @@ class RealTimeMessaging {
     }
 
     loadConversationMessages(conversation) {
-        // This would load actual messages from API
-        // For now, just show empty conversation
+        console.log('📨 Loading messages for conversation:', conversation);
+        
+        if (!conversation || !conversation.id) {
+            console.warn('⚠️ No valid conversation provided');
+            return;
+        }
+        
+        this.currentChatId = conversation.id;
+        
+        // Join conversation room in Socket.IO
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('join_room', { roomId: conversation.id });
+            console.log('🏠 Joined conversation room:', conversation.id);
+        }
+        
+        // Show loading state
         const messagesContainer = document.querySelector('.messages-container');
         if (messagesContainer) {
             messagesContainer.innerHTML = `
                 <div class="text-center py-8 text-gray-400">
-                    <p>Tải tin nhắn...</p>
+                    <div class="animate-pulse">📡 Tải tin nhắn...</div>
                 </div>
             `;
+        }
+        
+        // Load messages from API
+        this.loadMessagesFromAPI(conversation.id)
+            .then(() => {
+                console.log('✅ Messages loaded successfully');
+            })
+            .catch(error => {
+                console.error('❌ Failed to load messages:', error);
+                if (messagesContainer) {
+                    messagesContainer.innerHTML = `
+                        <div class="text-center py-8 text-red-400">
+                            <p>❌ Không thể tải tin nhắn</p>
+                            <button onclick="window.messagesApp?.loadConversationMessages(${JSON.stringify(conversation)})" 
+                                    class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                Thử lại
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+    }
+
+    async loadMessagesFromAPI(conversationId) {
+        try {
+            const token = localStorage.getItem('token') || '';
+            
+            const response = await fetch(`/api/conversations/${conversationId}/messages`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.messages) {
+                console.log(`📬 Loaded ${data.messages.length} messages from API`);
+                
+                // Clear existing messages
+                this.messages = [];
+                
+                // Add messages to array and render
+                data.messages.forEach(msg => {
+                    this.messages.push(msg);
+                });
+                
+                // Render all messages
+                this.renderMessages();
+                
+                // Scroll to bottom
+                this.scrollToBottom();
+                
+            } else {
+                throw new Error(data.message || 'Failed to load messages');
+            }
+            
+        } catch (error) {
+            console.error('❌ API load messages error:', error);
+            
+            // Show empty conversation as fallback
+            const messagesContainer = document.querySelector('.messages-container');
+            if (messagesContainer) {
+                messagesContainer.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <p>💬 Bắt đầu cuộc trò chuyện</p>
+                        <p class="text-sm mt-2">Gửi tin nhắn đầu tiên!</p>
+                    </div>
+                `;
+            }
+            
+            throw error;
         }
     }
 
@@ -1070,30 +1161,37 @@ class RealTimeMessaging {
     async sendMessageViaAPI(message, messageId) {
         try {
             console.log('📤 Sending message via API fallback');
-            const response = await fetch('/api/messages', {
+            
+            if (!this.currentChatId) {
+                throw new Error('No conversation ID available');
+            }
+            
+            const response = await fetch(`/api/conversations/${this.currentChatId}/messages`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
                 },
                 body: JSON.stringify({
-                    messageId: messageId,
                     text: message.text,
-                    chatId: this.currentChatId || 'global_chat',
-                    recipientId: message.recipientId,
-                    senderId: this.currentUser.id,
-                    senderName: this.currentUser.name,
-                    senderAvatar: this.currentUser.avatar,
-                    timestamp: message.timestamp
+                    type: 'text'
                 })
             });
 
             if (response.ok) {
                 const result = await response.json();
-                console.log('✅ Message sent via API:', result);
+                console.log('✅ Message sent and saved via API:', result);
+                
+                if (result.success && result.message) {
+                    // Add the saved message to our local messages array
+                    this.receiveMessage(result.message);
+                }
+                
                 this.updateMessageStatus(messageId, 'sent');
             } else {
                 console.error('❌ API send failed:', response.status);
+                const errorData = await response.json().catch(() => ({}));
+                console.error('❌ Error details:', errorData);
                 this.updateMessageStatus(messageId, 'failed');
             }
         } catch (error) {
