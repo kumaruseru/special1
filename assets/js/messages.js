@@ -15,6 +15,9 @@ class RealTimeMessaging {
         this.loadMessageHistory();
         this.updateChatLayout();
         
+        // Start message polling as fallback
+        this.startMessagePolling();
+        
         // Check for direct message after a short delay to ensure DOM is ready
         setTimeout(() => {
             this.checkForDirectMessage();
@@ -586,6 +589,26 @@ class RealTimeMessaging {
             this.receiveMessage(data);
         });
 
+        // Standard message event (fallback)
+        this.socket.on('message', (data) => {
+            console.log('📨 Received standard message:', data);
+            this.receiveMessage(data);
+        });
+
+        // New message event (alternative)
+        this.socket.on('new_message', (data) => {
+            console.log('📨 Received new message:', data);
+            this.receiveMessage(data);
+        });
+
+        // Broadcast message event  
+        this.socket.on('broadcast_message', (data) => {
+            console.log('📨 Received broadcast message:', data);
+            if (data.chatId === this.currentChatId || !this.currentChatId) {
+                this.receiveMessage(data);
+            }
+        });
+
         this.socket.on('typing_start', (data) => {
             if (data.userId !== this.currentUser.id) {
                 this.typingUsers.add(data.username);
@@ -1044,6 +1067,108 @@ class RealTimeMessaging {
         }, 50);
     }
 
+    async sendMessageViaAPI(message, messageId) {
+        try {
+            console.log('📤 Sending message via API fallback');
+            const response = await fetch('/api/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                },
+                body: JSON.stringify({
+                    messageId: messageId,
+                    text: message.text,
+                    chatId: this.currentChatId || 'global_chat',
+                    recipientId: message.recipientId,
+                    senderId: this.currentUser.id,
+                    senderName: this.currentUser.name,
+                    senderAvatar: this.currentUser.avatar,
+                    timestamp: message.timestamp
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('✅ Message sent via API:', result);
+                this.updateMessageStatus(messageId, 'sent');
+            } else {
+                console.error('❌ API send failed:', response.status);
+                this.updateMessageStatus(messageId, 'failed');
+            }
+        } catch (error) {
+            console.error('❌ API send error:', error);
+            this.updateMessageStatus(messageId, 'failed');
+        }
+    }
+
+    startMessagePolling() {
+        console.log('🔄 Starting message polling as fallback for real-time messaging');
+        
+        // Poll every 3 seconds for new messages
+        this.pollingInterval = setInterval(async () => {
+            if (this.currentChatId) {
+                await this.pollForNewMessages();
+            }
+        }, 3000);
+        
+        // Also poll conversations list every 10 seconds
+        this.conversationsPollingInterval = setInterval(async () => {
+            await this.refreshConversationsList();
+        }, 10000);
+    }
+
+    async pollForNewMessages() {
+        try {
+            const response = await fetch(`/api/conversations/${this.currentChatId}/messages?since=${this.getLastMessageTimestamp()}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                }
+            });
+
+            if (response.ok) {
+                const newMessages = await response.json();
+                if (newMessages && newMessages.length > 0) {
+                    console.log('📬 Polling found new messages:', newMessages.length);
+                    newMessages.forEach(msg => {
+                        if (!this.messages.find(m => m.id === msg.id)) {
+                            this.receiveMessage(msg);
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Polling failed:', error);
+        }
+    }
+
+    async refreshConversationsList() {
+        try {
+            if (typeof window.loadRealConversations === 'function') {
+                await window.loadRealConversations();
+            }
+        } catch (error) {
+            console.warn('⚠️ Conversation refresh failed:', error);
+        }
+    }
+
+    getLastMessageTimestamp() {
+        if (this.messages.length === 0) return 0;
+        return Math.max(...this.messages.map(m => new Date(m.timestamp).getTime()));
+    }
+
+    stopMessagePolling() {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+        if (this.conversationsPollingInterval) {
+            clearInterval(this.conversationsPollingInterval);
+            this.conversationsPollingInterval = null;
+        }
+        console.log('⏹️ Message polling stopped');
+    }
+
     updateMessageStatus(messageId, status) {
         const messageElement = this.messageContainer.querySelector(`[data-message-id="${messageId}"] .message-status`);
         if (messageElement) {
@@ -1368,14 +1493,20 @@ class RealTimeMessaging {
                 this.updateMessageStatus(messageId, 'sent');
             }, 10000); // Increased to 10 second timeout
             
-            // Use correct event name that server expects
-            this.socket.emit('send_message', {
+            // Emit with multiple event names to ensure server receives it
+            const messagePayload = {
                 messageId: messageId,
                 text: message.text,
                 timestamp: message.timestamp,
-                chatId: 'global_chat', // Default chat room
-                recipientId: message.recipientId
-            }, (acknowledgment) => {
+                chatId: this.currentChatId || 'global_chat',
+                recipientId: message.recipientId,
+                senderId: this.currentUser.id,
+                senderName: this.currentUser.name,
+                senderAvatar: this.currentUser.avatar
+            };
+            
+            // Try multiple event names
+            this.socket.emit('send_message', messagePayload, (acknowledgment) => {
                 clearTimeout(timeoutId);
                 console.log('📨 Message acknowledgment received:', acknowledgment);
                 
@@ -1391,13 +1522,39 @@ class RealTimeMessaging {
                     this.updateMessageStatus(messageId, 'sent');
                 }
             });
+            
+            // Also emit as broadcast for immediate local display
+            this.socket.emit('message', messagePayload);
+            this.socket.emit('new_message', messagePayload);
+            this.socket.emit('broadcast_message', messagePayload);
         } else {
             console.log('📻 Fallback: Using BroadcastChannel for message');
-            // Fallback: Use BroadcastChannel
+            
+            // First display locally
+            this.receiveMessage({
+                id: messageId,
+                senderId: this.currentUser.id,
+                senderName: this.currentUser.name,
+                senderAvatar: this.currentUser.avatar,
+                text: message.text,
+                timestamp: message.timestamp,
+                type: 'text',
+                status: 'sent'
+            });
+            
+            // Then try BroadcastChannel for other tabs
             this.broadcastMessage({
                 type: 'message',
-                ...message
+                id: messageId,
+                senderId: this.currentUser.id,
+                senderName: this.currentUser.name,
+                senderAvatar: this.currentUser.avatar,
+                text: message.text,
+                timestamp: message.timestamp
             });
+            
+            // Also try API fallback
+            this.sendMessageViaAPI(message, messageId);
             this.updateMessageStatus(messageId, 'sent');
         }
         
