@@ -254,26 +254,28 @@ main .glass-pane {
     animation: messageSlideIn 0.3s ease-out;
 }
 
-/* Navigation Link Styles */
+/* Navigation Link Styles - Updated to match home.html */
 .nav-link {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
     border-radius: 0.5rem;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.2s ease;
     color: #E5E7EB;
     text-decoration: none;
 }
 
 .nav-link:hover {
-    background-color: rgba(75, 85, 99, 0.3);
+    background-color: rgba(75, 85, 99, 0.5);
     color: #F3F4F6;
 }
 
-.nav-link.active {
-    background-color: rgba(79, 70, 229, 0.2);
+/* Active state for messages page */
+.nav-link.active,
+.nav-link[href="messages.html"] {
+    background-color: rgba(75, 85, 99, 0.2);
     color: #FFFFFF;
     font-weight: 600;
 }
@@ -622,58 +624,17 @@ main .glass-pane {
     transition: all 0.2s ease;
 }
 
-/* Navigation Sidebar Styles */
-.nav-sidebar {
-    min-height: 500px;
-    max-height: calc(100vh - 4rem);
-    overflow-y: auto;
+/* Logout Button */
+.logout-button {
+    background-color: rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    transition: all 0.3s ease;
+    color: #E5E7EB;
 }
 
-.nav-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 500px;
-}
-
-.nav-links-container {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0; /* Allow flex item to shrink */
-    padding: 0.5rem 0;
-}
-
-.nav-footer {
-    margin-top: auto;
-    padding-top: 1rem;
-    flex-shrink: 0;
-}
-
-/* Custom scroll for navigation sidebar only */
-.nav-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(75, 85, 99, 0.5) transparent;
-    -ms-overflow-style: auto;
-    overflow-y: auto !important;
-}
-
-.nav-scroll::-webkit-scrollbar {
-    display: block !important;
-    width: 6px !important;
-    background: transparent !important;
-}
-
-.nav-scroll::-webkit-scrollbar-track {
-    background: transparent !important;
-}
-
-.nav-scroll::-webkit-scrollbar-thumb {
-    background: rgba(75, 85, 99, 0.5) !important;
-    border-radius: 3px !important;
-}
-
-.nav-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(75, 85, 99, 0.7) !important;
+.logout-button:hover {
+    background-color: rgba(220, 38, 38, 0.4);
+    color: #fecaca;
 }
 
 /* Navigation Link Styles */

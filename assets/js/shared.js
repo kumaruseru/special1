@@ -5,7 +5,7 @@ function loadUserInfo() {
     console.log('🔍 Loading user info...');
     
     // Try all possible user data sources
-    let userInfo = localStorage.getItem('userInfo') || localStorage.getItem('userData');
+    let userInfo = localStorage.getItem('currentUser') || localStorage.getItem('userInfo') || localStorage.getItem('userData');
     let userName = localStorage.getItem('userName');
     let userEmail = localStorage.getItem('userEmail');
     
@@ -24,7 +24,7 @@ function loadUserInfo() {
             // Update user name
             const userNameEl = document.getElementById('user-name');
             if (userNameEl) {
-                let displayName = 'Loading...';
+                let displayName = 'User';
                 if (user.firstName && user.lastName) {
                     displayName = `${user.firstName} ${user.lastName}`;
                 } else if (user.fullName) {
@@ -46,28 +46,28 @@ function loadUserInfo() {
                     displayEmail = `@${user.email.split('@')[0]}`;
                 } else if (userEmail) {
                     displayEmail = `@${userEmail.split('@')[0]}`;
+                } else if (user.username) {
+                    displayEmail = `@${user.username}`;
                 }
                 userEmailEl.textContent = displayEmail;
                 console.log('✅ Updated user email to:', displayEmail);
             }
             
-            // Update user avatar with first letter
+            // Update user avatar
             const userAvatarEl = document.getElementById('user-avatar');
             if (userAvatarEl) {
-                let firstLetter = 'U';
-                if (user.firstName) {
-                    firstLetter = user.firstName.charAt(0).toUpperCase();
-                } else if (user.fullName) {
-                    firstLetter = user.fullName.charAt(0).toUpperCase();
-                } else if (user.name) {
-                    firstLetter = user.name.charAt(0).toUpperCase();
-                } else if (user.email) {
-                    firstLetter = user.email.charAt(0).toUpperCase();
-                } else if (userEmail) {
-                    firstLetter = userEmail.charAt(0).toUpperCase();
+                let avatarUrl = 'https://placehold.co/48x48/4F46E5/FFFFFF?text=U';
+                if (user.avatar) {
+                    avatarUrl = user.avatar;
+                } else if (user.profilePicture) {
+                    avatarUrl = user.profilePicture;
+                } else {
+                    // Generate avatar based on name
+                    const nameForAvatar = user.name || user.firstName || user.username || 'User';
+                    avatarUrl = `https://placehold.co/48x48/4F46E5/FFFFFF?text=${nameForAvatar.charAt(0).toUpperCase()}`;
                 }
-                userAvatarEl.src = `https://placehold.co/48x48/4F46E5/FFFFFF?text=${firstLetter}`;
-                console.log('✅ Updated avatar with letter:', firstLetter);
+                userAvatarEl.src = avatarUrl;
+                console.log('✅ Updated user avatar to:', avatarUrl);
             }
             
         } catch (error) {
