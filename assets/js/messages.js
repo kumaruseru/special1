@@ -282,19 +282,31 @@ class RealTimeMessaging {
     }
 
     getCurrentUser() {
-        // Get current user from authentication or localStorage
+        // Get current user from localStorage or create new one
         let userData = localStorage.getItem('currentUser');
         if (userData) {
-            try {
-                return JSON.parse(userData);
-            } catch (error) {
-                console.error('Error parsing user data:', error);
+            const user = JSON.parse(userData);
+            // Check if it's a mock user and reset
+            if (user.name.startsWith('Người dùng ') && user.name.includes('user_')) {
                 localStorage.removeItem('currentUser');
+                userData = null;
+            } else {
+                return user;
             }
         }
         
-        // Return null if no user found - will redirect to login
-        return null;
+        // Create new user - let them authenticate with the real system
+        const userName = prompt('Nhập tên của bạn:') || 'Anonymous';
+        const userId = 'user_' + Date.now(); // Use timestamp for unique ID
+        const user = {
+            id: userId,
+            name: userName,
+            avatar: `https://placehold.co/40x40/${this.getRandomColor()}/FFFFFF?text=${userName.charAt(0).toUpperCase()}`,
+            joinedAt: Date.now()
+        };
+        
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        return user;
     }
 
     getCurrentChatId() {
@@ -763,14 +775,72 @@ class RealTimeMessaging {
         }
     }
 
-    loadMessageHistory() {
+    async loadMessageHistory() {
+        console.log('📥 Loading message history for chat:', this.currentChatId);
+        
+        if (!this.currentChatId) {
+            console.log('No chat ID, using localStorage fallback');
+            const savedMessages = localStorage.getItem('messages_general');
+            if (savedMessages) {
+                this.messages = JSON.parse(savedMessages);
+                this.renderAllMessages();
+            } else {
+                this.messages = [];
+            }
+            return;
+        }
+
+        try {
+            // Try to load from server API first
+            const token = localStorage.getItem('token');
+            if (token) {
+                console.log('🌐 Fetching messages from server API...');
+                const response = await fetch(`/api/conversations/${this.currentChatId}/messages`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.messages) {
+                        console.log(`✅ Loaded ${data.messages.length} messages from server`);
+                        
+                        // Convert server messages to client format
+                        this.messages = data.messages.map(msg => ({
+                            id: msg.id,
+                            senderId: msg.senderId,
+                            senderName: msg.senderName,
+                            senderAvatar: msg.senderAvatar,
+                            text: msg.text,
+                            timestamp: new Date(msg.timestamp).getTime(),
+                            isOwn: msg.senderId === this.currentUser?.id
+                        }));
+                        
+                        this.renderAllMessages();
+                        
+                        // Also save to localStorage as backup
+                        this.saveMessages();
+                        return;
+                    }
+                } else {
+                    console.warn('⚠️ Server API failed, falling back to localStorage');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error loading messages from server:', error);
+        }
+
+        // Fallback to localStorage if server fails
+        console.log('📱 Loading messages from localStorage fallback');
         const savedMessages = localStorage.getItem(`messages_${this.currentChatId}`);
         if (savedMessages) {
             this.messages = JSON.parse(savedMessages);
             this.renderAllMessages();
         } else {
             this.messages = [];
-            // No automatic welcome message - keep chat clean
         }
     }
 
@@ -1869,9 +1939,9 @@ const monitorActiveCalls = () => {
 };
 
 // Real conversations loading function
-// Enhanced conversations loading with real API integration
+// Enhanced conversations loading with Telegram-inspired authentication
 window.loadRealConversations = async function() {
-    console.log('🔄 Loading conversations from API');
+    console.log('🔄 Loading real conversations from API');
     
     const conversationsList = document.getElementById('conversations-list');
     if (!conversationsList) {
@@ -1888,37 +1958,48 @@ window.loadRealConversations = async function() {
     `;
 
     try {
-        // Try to load from API
-        const token = localStorage.getItem('authToken') || localStorage.getItem('token') || localStorage.getItem('cosmic_token');
-        
-        if (!token) {
-            console.log('🔑 No authentication token found');
-            window.showEmptyConversationsState();
-            return;
+        // Use Telegram-inspired auth manager
+        if (window.telegramAuth) {
+            console.log('🔐 TelegramAuth: Loading conversations with advanced authentication');
+            
+            const authState = window.telegramAuth.getAuthState();
+            console.log('🔍 TelegramAuth Conversations: Current state:', authState);
+            
+            if (!authState.isAuthenticated) {
+                console.log('❌ TelegramAuth Conversations: User not authenticated');
+                window.telegramAuth.handleAuthFailure();
+                return;
+            }
+
+            try {
+                // Make authenticated request using TelegramAuth
+                const response = await window.telegramAuth.makeAuthenticatedRequest('/api/conversations');
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 TelegramAuth Conversations: API Response:', data);
+
+                    if (data.success && data.conversations && data.conversations.length > 0) {
+                        console.log('✅ Loaded conversations from API:', data.conversations.length);
+                        window.renderConversations(data.conversations);
+                        return;
+                    } else {
+                        console.log('📭 No conversations found, showing empty state');
+                        window.showEmptyConversationsState();
+                        return;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('❌ TelegramAuth Conversations: API request failed:', error);
+                throw error;
+            }
         }
 
-        const response = await fetch('/api/conversations', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('📊 API Response:', data);
-
-            if (data.success && data.conversations && data.conversations.length > 0) {
-                console.log('✅ Loaded conversations from API:', data.conversations.length);
-                window.renderConversations(data.conversations);
-            } else {
-                console.log('📭 No conversations found');
-                window.showEmptyConversationsState();
-            }
-        } else {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        // Fallback to legacy method if TelegramAuth not available
+        console.log('⚠️ TelegramAuth not available for conversations, using fallback');
+        await loadRealConversationsLegacy();
 
     } catch (error) {
         console.error('❌ Error loading conversations:', error);
@@ -2076,11 +2157,54 @@ window.showEmptyConversationsState = function() {
             </svg>
             <h3 class="font-semibold text-white mb-2">Chưa có cuộc trò chuyện nào</h3>
             <p class="text-sm mb-4">Bắt đầu cuộc trò chuyện mới từ trang Khám phá</p>
-            <button onclick="window.location.href='discovery.html'" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                Khám phá bạn bè
-            </button>
+            <div class="space-y-2">
+                <button onclick="window.location.href='discovery.html'" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                    Khám phá bạn bè
+                </button>
+                <button onclick="window.createDemoConversations()" class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+                    Tạo cuộc trò chuyện demo
+                </button>
+            </div>
         </div>
     `;
+};
+
+// Create demo conversations for testing
+window.createDemoConversations = function() {
+    console.log('🎭 Creating demo conversations...');
+    
+    const demoConversations = [
+        {
+            id: 'demo_1',
+            name: 'Alice Johnson',
+            avatar: 'https://placehold.co/48x48/E91E63/FFFFFF?text=A',
+            lastMessage: 'Chào bạn! Bạn có khỏe không?',
+            timestamp: Date.now() - 300000, // 5 minutes ago
+            unreadCount: 2,
+            isOnline: true
+        },
+        {
+            id: 'demo_2', 
+            name: 'Bob Smith',
+            avatar: 'https://placehold.co/48x48/2196F3/FFFFFF?text=B',
+            lastMessage: 'Hẹn gặp lại bạn sau nhé!',
+            timestamp: Date.now() - 1800000, // 30 minutes ago
+            unreadCount: 0,
+            isOnline: false
+        },
+        {
+            id: 'demo_3',
+            name: 'Carol Wilson', 
+            avatar: 'https://placehold.co/48x48/4CAF50/FFFFFF?text=C',
+            lastMessage: 'Cảm ơn bạn đã giúp đỡ 😊',
+            timestamp: Date.now() - 3600000, // 1 hour ago
+            unreadCount: 1,
+            isOnline: true
+        }
+    ];
+    
+    window.renderConversations(demoConversations);
+    console.log('✅ Demo conversations created');
 };
 
 window.selectConversation = function(conversationId, userName, userAvatar) {
@@ -2127,18 +2251,35 @@ window.selectConversation = function(conversationId, userName, userAvatar) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('=== DOM CONTENT LOADED ===');
     
-    // Check if user is authenticated
-    const currentUser = localStorage.getItem('currentUser');
-    const authToken = localStorage.getItem('authToken') || localStorage.getItem('token');
-    
-    if (!currentUser || !authToken) {
-        console.log('🔒 User not authenticated, redirecting to login');
-        window.location.href = '../pages/login.html';
-        return;
+    // Initialize Telegram-inspired authentication
+    if (typeof TelegramAuth !== 'undefined') {
+        console.log('🔐 Initializing TelegramAuth for Messages page');
+        window.telegramAuth = new TelegramAuth();
+        console.log('✅ TelegramAuth initialized successfully');
+    } else {
+        console.warn('⚠️ TelegramAuth class not available, falling back to legacy auth');
     }
     
     // Initialize Real-time Messaging
     window.realTimeMessaging = new RealTimeMessaging();
+    
+    // Add a debug button for testing
+    const debugButton = document.createElement('button');
+    debugButton.innerHTML = 'DEBUG: Test Chat Window';
+    debugButton.className = 'fixed top-4 left-4 bg-red-600 text-white px-4 py-2 rounded z-50';
+    debugButton.onclick = () => {
+        console.log('=== DEBUG TEST ===');
+        const testUser = {
+            id: 'debug-user',
+            name: 'Debug User',
+            username: 'debug',
+            avatar: 'https://placehold.co/100x100/FF0000/FFFFFF?text=D'
+        };
+        if (realTimeMessaging) {
+            realTimeMessaging.showConversationPlaceholder(testUser);
+        }
+    };
+    document.body.appendChild(debugButton);
     
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
@@ -2153,6 +2294,43 @@ window.addEventListener('beforeunload', () => {
     if (realTimeMessaging) {
         realTimeMessaging.destroy();
     }
+});
+
+// --- Page Navigation Logic ---
+document.addEventListener('DOMContentLoaded', () => {
+    const mainNav = document.getElementById('main-nav');
+    const navLinks = mainNav.querySelectorAll('.nav-link');
+    const pages = document.querySelectorAll('.page-content');
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            // Only prevent default if it's an internal page transition (href="#")
+            if (link.getAttribute('href') === '#' && link.dataset.page) {
+                e.preventDefault();
+                const targetPageId = link.dataset.page;
+
+                // Hide all page content
+                pages.forEach(page => {
+                    page.classList.add('hidden');
+                });
+
+                // Show the target page
+                const targetPage = document.getElementById(`page-${targetPageId}`);
+                if (targetPage) {
+                    targetPage.classList.remove('hidden');
+                }
+
+                // Update active link style
+                navLinks.forEach(navLink => {
+                    navLink.classList.remove('text-white', 'bg-gray-500/20');
+                    navLink.classList.add('hover:bg-gray-800/50');
+                });
+                link.classList.add('text-white', 'bg-gray-500/20');
+                link.classList.remove('hover:bg-gray-800/50');
+            }
+            // If href is set to a real URL, let the default navigation happen
+        });
+    });
 });
 
 // === END OF MESSAGES.JS ===
