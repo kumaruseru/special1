@@ -2019,7 +2019,8 @@ window.renderConversations = function(conversations) {
         return `
             <div class="conversation-item ${conv.id === (window.realTimeMessaging?.currentChatId || '') ? 'active' : ''}" 
                  data-conversation-id="${conv.id}" 
-                 onclick="window.selectConversation('${conv.id}', '${userName}', '${userAvatar}')">
+                 data-user-name="${userName.replace(/"/g, '&quot;')}" 
+                 data-user-avatar="${userAvatar}">
                 <div class="flex items-center gap-4 p-4 hover:bg-gray-800/50 cursor-pointer transition-colors border-b border-gray-700/30">
                     <div class="relative">
                         <img src="${userAvatar}" 
@@ -2044,6 +2045,19 @@ window.renderConversations = function(conversations) {
     }).join('');
 
     conversationsList.innerHTML = conversationsHTML;
+    
+    // Add click event listeners to conversation items
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const conversationId = this.getAttribute('data-conversation-id');
+            const userName = this.getAttribute('data-user-name');
+            const userAvatar = this.getAttribute('data-user-avatar');
+            
+            console.log('🎯 Conversation clicked:', {conversationId, userName, userAvatar});
+            window.selectConversation(conversationId, userName, userAvatar);
+        });
+    });
+    
     console.log('✅ Conversations rendered successfully');
 };
 
