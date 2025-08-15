@@ -282,7 +282,36 @@ class RealTimeMessaging {
     }
 
     getCurrentUser() {
-        // Get current user from localStorage or create new one
+        // First try to get user from shared.js userInfo
+        const userInfo = localStorage.getItem('userInfo') || localStorage.getItem('userData');
+        if (userInfo) {
+            try {
+                const user = JSON.parse(userInfo);
+                if (user.fullName || user.name) {
+                    return {
+                        id: user.id || 'user_' + (user.fullName || user.name).replace(/\s+/g, '').toLowerCase(),
+                        name: user.fullName || user.name,
+                        avatar: `https://placehold.co/40x40/4F46E5/FFFFFF?text=${(user.fullName || user.name).charAt(0).toUpperCase()}`,
+                        joinedAt: Date.now()
+                    };
+                }
+            } catch (error) {
+                console.warn('Error parsing userInfo:', error);
+            }
+        }
+        
+        // Try userName from localStorage
+        const userName = localStorage.getItem('userName');
+        if (userName && userName !== 'Loading...') {
+            return {
+                id: 'user_' + userName.replace(/\s+/g, '').toLowerCase(),
+                name: userName,
+                avatar: `https://placehold.co/40x40/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`,
+                joinedAt: Date.now()
+            };
+        }
+        
+        // Check existing currentUser
         let userData = localStorage.getItem('currentUser');
         if (userData) {
             const user = JSON.parse(userData);
@@ -295,13 +324,13 @@ class RealTimeMessaging {
             }
         }
         
-        // Create new user - let them authenticate with the real system
-        const userName = prompt('Nhập tên của bạn:') || 'Anonymous';
-        const userId = 'user_' + Date.now(); // Use timestamp for unique ID
+        // Create new user as fallback
+        const userNameInput = prompt('Nhập tên của bạn:') || 'Anonymous';
+        const userId = 'user_' + userNameInput.replace(/\s+/g, '').toLowerCase();
         const user = {
             id: userId,
-            name: userName,
-            avatar: `https://placehold.co/40x40/${this.getRandomColor()}/FFFFFF?text=${userName.charAt(0).toUpperCase()}`,
+            name: userNameInput,
+            avatar: `https://placehold.co/40x40/${this.getRandomColor()}/FFFFFF?text=${userNameInput.charAt(0).toUpperCase()}`,
             joinedAt: Date.now()
         };
         
@@ -947,11 +976,25 @@ class RealTimeMessaging {
     renderMessage(message) {
         if (!this.messageContainer) return;
 
-        const isOwn = message.senderId === this.currentUser.id;
+        // Better logic to determine if message is own
+        const isOwn = message.senderId === this.currentUser.id || 
+                     message.senderName === this.currentUser.name ||
+                     message.username === this.currentUser.name ||
+                     (message.senderName === 'Nghĩa Hoàng' && this.currentUser.name === 'Nghĩa Hoàng');
+                     
         const isSystem = message.type === 'system';
         const timeStr = new Date(message.timestamp).toLocaleTimeString('vi-VN', {
             hour: '2-digit',
             minute: '2-digit'
+        });
+
+        console.log('Rendering message:', {
+            text: message.text,
+            senderId: message.senderId,
+            senderName: message.senderName,
+            currentUserId: this.currentUser.id,
+            currentUserName: this.currentUser.name,
+            isOwn: isOwn
         });
 
         const messageElement = document.createElement('div');
