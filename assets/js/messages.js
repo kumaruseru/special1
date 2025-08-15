@@ -915,7 +915,7 @@ class RealTimeMessaging {
                     
                     <div class="max-w-xs lg:max-w-md ${isOwn ? 'order-first' : 'order-last'}">
                         ${!isOwn ? `<div class="text-xs text-gray-400 mb-1 px-2">${this.escapeHtml(message.senderName)}</div>` : ''}
-                        <div class="${isOwn ? 'bg-indigo-600 text-white' : 'bg-gray-700/50 text-gray-100'} rounded-lg p-3 shadow-sm ${message.text.length > 200 ? 'message-long' : ''}">
+                        <div class="text-white rounded-lg p-3 ${message.text.length > 200 ? 'message-long' : ''}">
                             <p class="break-words">${this.escapeHtml(message.text)}</p>
                         </div>
                         
@@ -986,7 +986,7 @@ class RealTimeMessaging {
             typingIndicator.innerHTML = `
                 <div class="flex justify-start items-end gap-2">
                     <img src="https://placehold.co/32x32/8A2BE2/FFFFFF?text=..." alt="Typing" class="w-8 h-8 rounded-full">
-                    <div class="bg-gray-700/50 rounded-lg rounded-tl-none px-4 py-2">
+                    <div class="rounded-lg rounded-tl-none px-4 py-2">
                         <div class="flex items-center gap-2">
                             <span class="text-xs text-gray-300">${typingText}</span>
                             <div class="typing-dots flex gap-1">
