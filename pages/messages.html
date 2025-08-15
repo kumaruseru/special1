@@ -70,72 +70,67 @@
         <!-- Left Sidebar Navigation -->
         <aside class="col-span-12 lg:col-span-3 h-fit sticky top-8">
             <div class="glass-pane p-4 rounded-2xl space-y-2">
-                <a href="#" class="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-800/50 transition-colors">
-                    <img id="user-avatar" src="https://placehold.co/48x48/4F46E5/FFFFFF?text=U" alt="User Avatar" class="w-12 h-12 rounded-full border-2 border-indigo-500"/>
-                    <div>
-                        <h3 id="user-name" class="font-bold text-lg text-white">Loading...</h3>
-                        <p id="user-email" class="text-sm text-gray-400">@user</p>
-                    </div>
-                </a>
-                <hr class="border-gray-700/50"/>
-
-                    <!-- Navigation Links -->
-                    <div class="nav-links-container nav-scroll">
-                        <nav id="main-nav" class="space-y-1">
-                            <a href="../index.html" data-page="home" class="nav-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                <span>Trang chủ</span>
-                            </a>
-                            <a href="discovery.html" data-page="discovery" class="nav-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                                <span>Khám phá</span>
-                            </a>
-                            <a href="friend-requests.html" data-page="friend-requests" class="nav-link relative">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="8.5" cy="7" r="4"/>
-                                    <line x1="20" y1="8" x2="20" y2="14"/>
-                                    <line x1="23" y1="11" x2="17" y2="11"/>
-                                </svg>
-                                <span>Lời mời kết bạn</span>
-                                <span id="friend-requests-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
-                            </a>
-                            <a href="messages.html" data-page="messages" class="nav-link active">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                                <span>Tin nhắn</span>
-                            </a>
-                            <a href="maps.html" data-page="maps" class="nav-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                <span>Bản đồ</span>
-                            </a>
-                            <a href="profile.html" data-page="profile" class="nav-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                <span>Hồ sơ</span>
-                            </a>
-                            <a href="settings.html" data-page="settings" class="nav-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                <span>Cài đặt</span>
-                            </a>
-                        </nav>
-                    </div>
-
-                    <!-- Footer with Logout Button -->
-                    <div class="nav-footer">
-                        <hr class="border-gray-700/50 mb-4"/>
-                        <button class="w-full logout-button font-bold py-3 rounded-lg flex items-center justify-center gap-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-                            <span>Đăng xuất</span>
-                        </button>
-                    </div>
+                <!-- User Profile Section -->
+                <div class="flex-shrink-0">
+                    <a href="#" class="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-800/50 transition-colors">
+                        <img id="user-avatar" src="https://placehold.co/48x48/4F46E5/FFFFFF?text=U" alt="User Avatar" class="w-12 h-12 rounded-full border-2 border-indigo-500"/>
+                        <div class="min-w-0">
+                            <h3 id="user-name" class="font-bold text-lg text-white truncate">Loading...</h3>
+                            <p id="user-email" class="text-sm text-gray-400 truncate">@user</p>
+                        </div>
+                    </a>
+                    <hr class="border-gray-700/50 my-3"/>
                 </div>
+
+                <!-- Navigation Links -->
+                <nav id="main-nav" class="flex flex-col space-y-2">
+                    <a href="../index.html" data-page="home" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <span>Trang chủ</span>
+                    </a>
+                    <a href="discovery.html" data-page="discovery" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <span>Khám phá</span>
+                    </a>
+                    <a href="friend-requests.html" data-page="friend-requests" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50 relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="8.5" cy="7" r="4"/>
+                            <line x1="20" y1="8" x2="20" y2="14"/>
+                            <line x1="23" y1="11" x2="17" y2="11"/>
+                        </svg>
+                        <span>Lời mời kết bạn</span>
+                        <span id="friend-requests-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full hidden">0</span>
+                    </a>
+                    <a href="messages.html" data-page="messages" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors text-white bg-gray-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <span>Tin nhắn</span>
+                    </a>
+                    <a href="maps.html" data-page="maps" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>Bản đồ</span>
+                    </a>
+                    <a href="profile.html" data-page="profile" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span>Hồ sơ</span>
+                    </a>
+                    <a href="settings.html" data-page="settings" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors hover:bg-gray-800/50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <span>Cài đặt</span>
+                    </a>
+                </nav>
+                <hr class="border-gray-700/50 pt-2"/>
+                <button class="w-full logout-button font-bold py-3 rounded-lg flex items-center justify-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                    <span>Đăng xuất</span>
+                </button>
             </div>
         </aside>
 
         <!-- Main Content Area -->
-        <div id="main-content-wrapper" class="col-span-12 lg:col-span-9">
+        <main class="col-span-12 lg:col-span-9 space-y-6">
             <!-- Messages Page Content -->
-            <main id="page-messages" class="page-content">
-                <div class="glass-pane rounded-2xl h-[calc(100vh-4rem)] flex">
+            <div class="glass-pane rounded-2xl h-[calc(100vh-4rem)] flex">
                     <!-- Conversations List -->
                     <div class="w-full md:w-1/3 border-r border-gray-700/50 flex flex-col">
                         <div class="p-4 border-b border-gray-700/50">
@@ -193,20 +188,11 @@
 
                         <!-- Empty Chat Placeholder -->
                         <div id="empty-chat-placeholder" class="h-full flex items-center justify-center">
-                            <div class="text-center text-gray-400 p-8">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-4 opacity-50">
-                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                                    <polyline points="22,6 12,13 2,6"/>
-                                </svg>
-                                <h3 class="font-semibold text-white mb-2">Chọn một cuộc trò chuyện</h3>
-                                <p class="text-sm">Chọn cuộc trò chuyện từ danh sách bên trái để bắt đầu nhắn tin</p>
-                            </div>
-                        </div>
+                            <!-- Empty state - no content -->
                     </div>
                 </div>
-            </main>
-
-        </div>
+            </div>
+        </main>
     </div>
 
     <!-- Voice Call Interface Overlay -->

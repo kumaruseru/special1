@@ -84,6 +84,20 @@ main .glass-pane {
     grid-column: span 9 / span 9;
 }
 
+/* Height fit for sticky sidebar */
+.h-fit {
+    height: fit-content;
+}
+
+/* Space between elements */
+.space-y-2 > * + * {
+    margin-top: 0.5rem;
+}
+
+.space-y-6 > * + * {
+    margin-top: 1.5rem;
+}
+
 .gap-8 {
     gap: 2rem;
 }
