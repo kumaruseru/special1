@@ -214,22 +214,19 @@ main .glass-pane {
 .message-bubble {
     max-width: 20rem;
     padding: 0.75rem 1rem;
-    border-radius: 0;
+    border-radius: 1rem;
     word-wrap: break-word;
     line-height: 1.4;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
 }
 
 .message.own .message-bubble {
-    background: transparent !important;
+    background: #4F46E5;
     color: white;
-    border-bottom-right-radius: 0;
+    border-bottom-right-radius: 0.25rem;
 }
 
 .message.other .message-bubble {
-    background: transparent !important;
+    background: rgba(75, 85, 99, 0.5);
     color: white;
     border-top-left-radius: 0.25rem;
 }
@@ -459,26 +456,24 @@ main .glass-pane {
     font-size: 0.95rem; /* Slightly larger text */
     line-height: 1.4; /* Better line spacing */
     padding: 0.875rem 1rem; /* Increased padding for better touch targets */
-    border-radius: 0; /* Remove rounded corners */
-    box-shadow: none !important; /* Remove shadow */
+    border-radius: 1rem; /* More rounded corners */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow */
     word-wrap: break-word; /* Handle long words */
     overflow-wrap: break-word;
     hyphens: auto; /* Enable hyphenation */
-    background: transparent !important; /* Remove background */
-    border: none !important; /* Remove border */
 }
 
 /* Handle different message types */
 .message .bg-indigo-600 {
-    background: transparent !important;
-    border: none !important;
+    background: transparent;
+    border: 1px solid rgba(75, 85, 99, 0.3);
     color: #f3f4f6;
 }
 
 .message .bg-gray-700\/50 {
-    background: transparent !important;
-    border: none !important;
-    backdrop-filter: none;
+    background: transparent;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+    backdrop-filter: blur(8px);
 }
 
 /* Message text improvements */
