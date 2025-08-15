@@ -2369,8 +2369,8 @@ window.renderConversations = function(conversations) {
                       otherUser.email?.split('@')[0] ||
                       'Người dùng';
             userAvatar = otherUser.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
-            lastMessage = conv.lastMessage?.content || 'Chưa có tin nhắn';
-            timestamp = conv.lastMessage?.createdAt;
+            lastMessage = conv.lastMessage?.content || conv.lastMessage?.text || 'Chưa có tin nhắn';
+            timestamp = conv.lastMessage?.createdAt || conv.lastMessage?.timestamp;
             isOnline = otherUser.online || false;
         } else if (conv.participants) {
             // Participants format
@@ -2380,7 +2380,14 @@ window.renderConversations = function(conversations) {
                       otherUser?.email?.split('@')[0] ||
                       'Người dùng';
             userAvatar = otherUser?.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
-            lastMessage = conv.lastMessage || 'Chưa có tin nhắn';
+            
+            // Handle lastMessage object or string
+            if (typeof conv.lastMessage === 'object' && conv.lastMessage !== null) {
+                lastMessage = conv.lastMessage.text || conv.lastMessage.content || 'Chưa có tin nhắn';
+            } else {
+                lastMessage = conv.lastMessage || 'Chưa có tin nhắn';
+            }
+            
             timestamp = conv.lastMessageTime || conv.timestamp;
             isOnline = otherUser?.online || conv.isOnline || false;
         } else {
@@ -2396,7 +2403,24 @@ window.renderConversations = function(conversations) {
         const unreadCount = conv.unreadCount || 0;
         const timeString = timestamp ? new Date(timestamp).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'}) : '';
 
-        console.log('✅ Processed conversation:', {conversationId, userName, userAvatar, lastMessage});
+        // Truncate lastMessage if too long and validate
+        if (lastMessage && typeof lastMessage === 'string' && lastMessage.length > 50) {
+            lastMessage = lastMessage.substring(0, 50) + '...';
+        }
+        
+        // Fallback to empty message if lastMessage is still invalid
+        if (!lastMessage || typeof lastMessage !== 'string' || lastMessage.trim() === '') {
+            lastMessage = 'Chưa có tin nhắn';
+        }
+
+        console.log('✅ Processed conversation:', {
+            conversationId: conv.id, 
+            userName, 
+            userAvatar, 
+            lastMessage,
+            lastMessageRaw: conv.lastMessage,
+            lastMessageType: typeof conv.lastMessage
+        });
 
         return `
             <div class="conversation-item ${conversationId === (window.realTimeMessaging?.currentChatId || '') ? 'active' : ''}" 
