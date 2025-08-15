@@ -2008,7 +2008,10 @@ window.renderConversations = function(conversations) {
         if (conv.otherUser) {
             // API format
             otherUser = conv.otherUser;
-            userName = otherUser.name || `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim() || otherUser.email || 'Unknown User';
+            userName = otherUser.name || 
+                      `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim() || 
+                      otherUser.email?.split('@')[0] ||
+                      'Người dùng';
             userAvatar = otherUser.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
             lastMessage = conv.lastMessage?.content || 'Chưa có tin nhắn';
             timestamp = conv.lastMessage?.createdAt;
@@ -2016,14 +2019,17 @@ window.renderConversations = function(conversations) {
         } else if (conv.participants) {
             // Participants format
             otherUser = conv.participants.find(p => p.id !== window.realTimeMessaging?.currentUser?.id);
-            userName = otherUser?.name || otherUser?.username || 'Unknown User';
+            userName = otherUser?.name || 
+                      otherUser?.username || 
+                      otherUser?.email?.split('@')[0] ||
+                      'Người dùng';
             userAvatar = otherUser?.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
             lastMessage = conv.lastMessage || 'Chưa có tin nhắn';
             timestamp = conv.lastMessageTime || conv.timestamp;
             isOnline = otherUser?.online || conv.isOnline || false;
         } else {
             // Demo format
-            userName = conv.name || 'Unknown User';
+            userName = conv.name || conv.username || 'Người dùng';
             userAvatar = conv.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
             lastMessage = conv.lastMessage || 'Chưa có tin nhắn';
             timestamp = conv.lastMessageTime || conv.timestamp;
