@@ -2000,25 +2000,45 @@ window.renderConversations = function(conversations) {
     }
 
     const conversationsHTML = conversations.map(conv => {
+        console.log('🔍 Processing conversation:', conv);
+        
         // Handle both API format and demo format
-        const otherUser = conv.participants?.find(p => p.id !== window.realTimeMessaging?.currentUser?.id) || {
-            name: conv.name,
-            avatar: conv.avatar,
-            online: conv.isOnline
-        };
+        let otherUser, userName, userAvatar, lastMessage, timestamp, isOnline;
         
-        const userName = otherUser.name || otherUser.username || conv.name || 'Unknown User';
-        const userAvatar = otherUser.avatar || conv.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
-        const lastMessage = conv.lastMessage || 'Chưa có tin nhắn';
-        const timestamp = conv.lastMessageTime || conv.timestamp;
-        const isOnline = otherUser.online || conv.isOnline || false;
+        if (conv.otherUser) {
+            // API format
+            otherUser = conv.otherUser;
+            userName = otherUser.name || `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim() || otherUser.email || 'Unknown User';
+            userAvatar = otherUser.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
+            lastMessage = conv.lastMessage?.content || 'Chưa có tin nhắn';
+            timestamp = conv.lastMessage?.createdAt;
+            isOnline = otherUser.online || false;
+        } else if (conv.participants) {
+            // Participants format
+            otherUser = conv.participants.find(p => p.id !== window.realTimeMessaging?.currentUser?.id);
+            userName = otherUser?.name || otherUser?.username || 'Unknown User';
+            userAvatar = otherUser?.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
+            lastMessage = conv.lastMessage || 'Chưa có tin nhắn';
+            timestamp = conv.lastMessageTime || conv.timestamp;
+            isOnline = otherUser?.online || conv.isOnline || false;
+        } else {
+            // Demo format
+            userName = conv.name || 'Unknown User';
+            userAvatar = conv.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
+            lastMessage = conv.lastMessage || 'Chưa có tin nhắn';
+            timestamp = conv.lastMessageTime || conv.timestamp;
+            isOnline = conv.isOnline || false;
+        }
+        
+        const conversationId = conv.id || conv.partnerId || conv.otherUser?.id || `conv_${Date.now()}`;
         const unreadCount = conv.unreadCount || 0;
-        
         const timeString = timestamp ? new Date(timestamp).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'}) : '';
 
+        console.log('✅ Processed conversation:', {conversationId, userName, userAvatar, lastMessage});
+
         return `
-            <div class="conversation-item ${conv.id === (window.realTimeMessaging?.currentChatId || '') ? 'active' : ''}" 
-                 data-conversation-id="${conv.id}" 
+            <div class="conversation-item ${conversationId === (window.realTimeMessaging?.currentChatId || '') ? 'active' : ''}" 
+                 data-conversation-id="${conversationId}" 
                  data-user-name="${userName.replace(/"/g, '&quot;')}" 
                  data-user-avatar="${userAvatar}">
                 <div class="flex items-center gap-4 p-4 hover:bg-gray-800/50 cursor-pointer transition-colors border-b border-gray-700/30">
