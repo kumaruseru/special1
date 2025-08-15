@@ -418,5 +418,31 @@
     <script src="../assets/js/audio-generator.js"></script>
     <!-- Messages JavaScript -->
     <script src="../assets/js/messages.js"></script>
+    <script>
+        // Ensure user info is loaded after DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait a bit then force load user info
+            setTimeout(() => {
+                if (typeof loadUserInfo === 'function') {
+                    loadUserInfo();
+                }
+                
+                // Check if we have demo data to use
+                if (!localStorage.getItem('userInfo') && !localStorage.getItem('userName')) {
+                    console.log('No user data found, using demo data...');
+                    // Use demo data if no real user data exists
+                    const demoUserData = {
+                        fullName: 'hohuong',
+                        username: 'nghiaht2810',
+                        email: 'nghiaht2810@example.com'
+                    };
+                    
+                    if (typeof updateUserDisplay === 'function') {
+                        updateUserDisplay(demoUserData);
+                    }
+                }
+            }, 100);
+        });
+    </script>
 </body>
 </html>

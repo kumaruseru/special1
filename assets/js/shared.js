@@ -5,9 +5,9 @@ function loadUserInfo() {
     console.log('🔍 Loading user info...');
     
     // Try all possible user data sources
-    let userInfo = localStorage.getItem('currentUser') || localStorage.getItem('userInfo') || localStorage.getItem('userData');
-    let userName = localStorage.getItem('userName');
-    let userEmail = localStorage.getItem('userEmail');
+    let userInfo = localStorage.getItem('userInfo') || localStorage.getItem('userData');
+    let userName = localStorage.getItem('userName') || localStorage.getItem('fullName');
+    let userEmail = localStorage.getItem('userEmail') || localStorage.getItem('email');
     
     console.log('Available user data:', {
         userInfo: !!userInfo,
@@ -21,53 +21,69 @@ function loadUserInfo() {
             const user = JSON.parse(userInfo);
             console.log('Parsed user object:', user);
             
-            // Update user name
+            // Update user name with better fallbacks
             const userNameEl = document.getElementById('user-name');
             if (userNameEl) {
-                let displayName = 'User';
-                if (user.firstName && user.lastName) {
-                    displayName = `${user.firstName} ${user.lastName}`;
-                } else if (user.fullName) {
+                let displayName = 'Loading...';
+                if (user.fullName) {
                     displayName = user.fullName;
+                } else if (user.firstName && user.lastName) {
+                    displayName = `${user.firstName} ${user.lastName}`;
                 } else if (user.name) {
                     displayName = user.name;
+                } else if (user.username) {
+                    displayName = user.username;
                 } else if (userName) {
                     displayName = userName;
+                } else if (user.email) {
+                    displayName = user.email.split('@')[0];
+                } else if (userEmail) {
+                    displayName = userEmail.split('@')[0];
                 }
                 userNameEl.textContent = displayName;
                 console.log('✅ Updated user name to:', displayName);
             }
             
-            // Update user email
+            // Update user email with better fallbacks
             const userEmailEl = document.getElementById('user-email');
             if (userEmailEl) {
                 let displayEmail = '@user';
-                if (user.email) {
+                if (user.username) {
+                    displayEmail = `@${user.username}`;
+                } else if (user.email) {
                     displayEmail = `@${user.email.split('@')[0]}`;
                 } else if (userEmail) {
                     displayEmail = `@${userEmail.split('@')[0]}`;
-                } else if (user.username) {
-                    displayEmail = `@${user.username}`;
+                } else if (user.fullName) {
+                    displayEmail = `@${user.fullName.toLowerCase().replace(/\s+/g, '')}`;
+                } else if (userName) {
+                    displayEmail = `@${userName.toLowerCase().replace(/\s+/g, '')}`;
                 }
                 userEmailEl.textContent = displayEmail;
                 console.log('✅ Updated user email to:', displayEmail);
             }
             
-            // Update user avatar
+            // Update user avatar with first letter
             const userAvatarEl = document.getElementById('user-avatar');
             if (userAvatarEl) {
-                let avatarUrl = 'https://placehold.co/48x48/4F46E5/FFFFFF?text=U';
-                if (user.avatar) {
-                    avatarUrl = user.avatar;
-                } else if (user.profilePicture) {
-                    avatarUrl = user.profilePicture;
-                } else {
-                    // Generate avatar based on name
-                    const nameForAvatar = user.name || user.firstName || user.username || 'User';
-                    avatarUrl = `https://placehold.co/48x48/4F46E5/FFFFFF?text=${nameForAvatar.charAt(0).toUpperCase()}`;
+                let firstLetter = 'U';
+                if (user.fullName) {
+                    firstLetter = user.fullName.charAt(0).toUpperCase();
+                } else if (user.firstName) {
+                    firstLetter = user.firstName.charAt(0).toUpperCase();
+                } else if (user.name) {
+                    firstLetter = user.name.charAt(0).toUpperCase();
+                } else if (user.username) {
+                    firstLetter = user.username.charAt(0).toUpperCase();
+                } else if (userName) {
+                    firstLetter = userName.charAt(0).toUpperCase();
+                } else if (user.email) {
+                    firstLetter = user.email.charAt(0).toUpperCase();
+                } else if (userEmail) {
+                    firstLetter = userEmail.charAt(0).toUpperCase();
                 }
-                userAvatarEl.src = avatarUrl;
-                console.log('✅ Updated user avatar to:', avatarUrl);
+                userAvatarEl.src = `https://placehold.co/48x48/4F46E5/FFFFFF?text=${firstLetter}`;
+                console.log('✅ Updated avatar with letter:', firstLetter);
             }
             
         } catch (error) {
@@ -78,6 +94,7 @@ function loadUserInfo() {
         // Still try to use individual fields if available
         const userNameEl = document.getElementById('user-name');
         const userEmailEl = document.getElementById('user-email');
+        const userAvatarEl = document.getElementById('user-avatar');
         
         if (userNameEl && userName) {
             userNameEl.textContent = userName;
@@ -88,7 +105,46 @@ function loadUserInfo() {
             userEmailEl.textContent = `@${userEmail.split('@')[0]}`;
             console.log('✅ Fallback: Updated user email');
         }
+        
+        if (userAvatarEl && (userName || userEmail)) {
+            const firstLetter = userName ? userName.charAt(0).toUpperCase() : userEmail.charAt(0).toUpperCase();
+            userAvatarEl.src = `https://placehold.co/48x48/4F46E5/FFFFFF?text=${firstLetter}`;
+            console.log('✅ Fallback: Updated avatar with letter:', firstLetter);
+        }
     }
+}
+
+// Force update user display with specific data
+function updateUserDisplay(userData) {
+    console.log('🔄 Force updating user display with:', userData);
+    
+    if (userData.fullName || userData.name) {
+        const userNameEl = document.getElementById('user-name');
+        if (userNameEl) {
+            const displayName = userData.fullName || userData.name;
+            userNameEl.textContent = displayName;
+            localStorage.setItem('userName', displayName);
+        }
+    }
+    
+    if (userData.username || userData.email) {
+        const userEmailEl = document.getElementById('user-email');
+        if (userEmailEl) {
+            const displayEmail = userData.username ? `@${userData.username}` : `@${userData.email.split('@')[0]}`;
+            userEmailEl.textContent = displayEmail;
+        }
+    }
+    
+    // Update avatar
+    const userAvatarEl = document.getElementById('user-avatar');
+    if (userAvatarEl && (userData.fullName || userData.name || userData.username)) {
+        const name = userData.fullName || userData.name || userData.username;
+        const firstLetter = name.charAt(0).toUpperCase();
+        userAvatarEl.src = `https://placehold.co/48x48/4F46E5/FFFFFF?text=${firstLetter}`;
+    }
+    
+    // Store complete user data
+    localStorage.setItem('userInfo', JSON.stringify(userData));
 }
 
 // Check authentication
