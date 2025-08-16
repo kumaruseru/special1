@@ -323,7 +323,7 @@ class TelegramMessaging {
             
             return {
                 id: msg.id || msg._id,
-                text: msg.content || msg.text || '', // Use content field first
+                text: msg.text || msg.content || '', // Use text field first (decrypted), fallback to content
                 senderId: msg.senderId,
                 senderName: msg.senderName || 'Unknown',
                 chatId: chatId,

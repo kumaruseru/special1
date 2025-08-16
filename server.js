@@ -2254,7 +2254,7 @@ io.on('connection', (socket) => {
     });
     
     // Telegram-style message sending with delivery guarantees
-    socket.on('send_message', (data, callback) => {
+    socket.on('send_message', async (data, callback) => {
         try {
             const { messageId, text, timestamp, chatId } = data;
             
@@ -2289,8 +2289,26 @@ io.on('connection', (socket) => {
                 socket.emit('message_error', error);
                 return;
             }
+
+            // Save message to database for persistence
+            try {
+                const encryptedContent = encryptMessage(text.trim());
+                
+                const dbMessage = new Message({
+                    senderId: socket.userId,
+                    receiverId: chatId, // chatId is the other user's ID
+                    content: encryptedContent,
+                    isEncrypted: true
+                });
+
+                const savedMessage = await dbMessage.save();
+                console.log('💾 Message saved to database:', savedMessage._id);
+            } catch (dbError) {
+                console.error('❌ Failed to save message to database:', dbError);
+                // Continue with Socket.IO delivery even if DB save fails
+            }
             
-            // Create Telegram-style message
+            // Create Telegram-style message for real-time delivery
             const telegramMessage = new TelegramMessage({
                 id: messageId,
                 senderId: socket.userId,
