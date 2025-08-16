@@ -1478,7 +1478,16 @@ class TelegramCallSystem {
             const messaging = window.telegramMessaging;
             if (messaging && messaging.socket) {
                 messaging.socket.on('incoming_call', (data) => {
-                    this.showIncomingCallNotification(data);
+                    // Only show notification if this user is the target (receiver)
+                    const currentUserId = messaging.currentUser?.id;
+                    if (currentUserId && data.callerId !== currentUserId) {
+                        this.showIncomingCallNotification(data);
+                    }
+                });
+                
+                messaging.socket.on('call_initiated', (data) => {
+                    // This is for the caller - show outgoing call status
+                    this.showCallNotification('Đang gọi...', 'info');
                 });
                 
                 messaging.socket.on('call_accepted', (data) => {
@@ -1524,13 +1533,13 @@ class TelegramCallSystem {
 
         console.log(`📞 Initiating ${type} call to:`, chatUserName);
 
-        // Prepare call info
+        // Prepare call info for OUTGOING call
         const callInfo = {
             type: type, // 'voice' or 'video'
             contact: chatUserName,
             contactId: currentChat.id,
             avatar: chatUserAvatar,
-            state: 'outgoing',
+            state: 'outgoing', // This is an outgoing call
             timestamp: Date.now()
         };
 
