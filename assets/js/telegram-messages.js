@@ -374,15 +374,25 @@ class TelegramMessaging {
         messageEl.className = `message-item ${isOwn ? 'own' : 'other'} mb-4`;
         messageEl.setAttribute('data-message-id', message.id);
 
+        // Check if message is long (hash-like or very long text)
+        const isLongMessage = message.text.length > 50;
+        const isHashLike = /^[a-f0-9]{32,}/.test(message.text) || message.text.includes(':');
+        const maxWidthClass = isLongMessage ? 'max-w-md lg:max-w-lg' : 'max-w-xs lg:max-w-md';
+        
+        // Special styling for hash-like messages
+        const messageTextClass = isHashLike ? 
+            'message-text break-words font-mono text-xs leading-tight' : 
+            'message-text break-words';
+
         messageEl.innerHTML = `
             <div class="flex ${isOwn ? 'justify-end' : 'justify-start'}">
-                <div class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                <div class="${maxWidthClass} px-4 py-2 rounded-lg ${
                     isOwn 
                         ? 'bg-blue-600 text-white' 
                         : 'bg-gray-700 text-gray-100'
-                }">
+                } ${isLongMessage ? 'message-long' : ''}">
                     ${!isOwn ? `<div class="text-xs text-gray-400 mb-1">${message.senderName}</div>` : ''}
-                    <div class="message-text">${this.escapeHtml(message.text)}</div>
+                    <div class="${messageTextClass}">${this.escapeHtml(message.text)}</div>
                     <div class="text-xs ${isOwn ? 'text-blue-200' : 'text-gray-500'} mt-1 flex items-center">
                         <span>${timeStr}</span>
                         ${isOwn ? this.getStatusIcon(message.status) : ''}
