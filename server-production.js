@@ -242,9 +242,25 @@ io.on('connection', (socket) => {
     
     // Send message
     socket.on('send_message', async (data) => {
+        console.log('📨 Received send_message event:', {
+            hasMessageId: !!data.messageId,
+            hasText: !!data.text,
+            hasChatId: !!data.chatId,
+            hasSenderId: !!data.senderId,
+            chatId: data.chatId,
+            text: data.text?.substring(0, 50) + (data.text?.length > 50 ? '...' : ''),
+            socketUserId: socket.userId,
+            socketUsername: socket.username
+        });
+        
         const { messageId, text, timestamp, chatId, recipientId } = data;
         
         if (!socket.userId) {
+            console.error('❌ Socket user not authenticated:', {
+                socketId: socket.id,
+                hasUserId: !!socket.userId,
+                hasUsername: !!socket.username
+            });
             socket.emit('message_error', { error: 'User not authenticated for chat' });
             return;
         }
@@ -268,6 +284,14 @@ io.on('connection', (socket) => {
             // Save to database if MongoDB is available
             if (mongoConnection && chatId) {
                 try {
+                    console.log('💾 Attempting to save message to database...', {
+                        chatId: chatId,
+                        chatIdType: typeof chatId,
+                        senderId: socket.userId,
+                        senderName: socket.username,
+                        text: text
+                    });
+                    
                     const db = mongoConnection.db();
                     const messagesCollection = db.collection('messages');
                     const conversationsCollection = db.collection('conversations');
@@ -284,10 +308,10 @@ io.on('connection', (socket) => {
                     };
                     
                     const result = await messagesCollection.insertOne(dbMessageData);
-                    console.log('💾 Message saved to database:', result.insertedId);
+                    console.log('✅ Message saved to database:', result.insertedId);
                     
                     // Update conversation last message
-                    await conversationsCollection.updateOne(
+                    const conversationUpdate = await conversationsCollection.updateOne(
                         { _id: new ObjectId(chatId) },
                         {
                             $set: {
@@ -303,11 +327,28 @@ io.on('connection', (socket) => {
                         { upsert: true }
                     );
                     
+                    console.log('✅ Conversation updated:', {
+                        matched: conversationUpdate.matchedCount,
+                        modified: conversationUpdate.modifiedCount,
+                        upserted: conversationUpdate.upsertedCount
+                    });
+                    
                     messageData.id = result.insertedId.toString();
                     
                 } catch (dbError) {
                     console.error('❌ Database save error:', dbError);
+                    console.error('❌ Full error details:', {
+                        message: dbError.message,
+                        stack: dbError.stack,
+                        chatId: chatId,
+                        mongoConnection: !!mongoConnection
+                    });
                 }
+            } else {
+                console.log('⚠️ Message not saved - missing requirements:', {
+                    hasMongoConnection: !!mongoConnection,
+                    hasChatId: !!chatId
+                });
             }
             
             // Broadcast to all users in the conversation
