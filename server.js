@@ -2362,8 +2362,14 @@ io.on('connection', (socket) => {
                 if (targetSocket.userId === receiverId && targetSocket.id !== socket.id) {
                     console.log(`📨 Delivering message to user ${receiverId} via socket ${targetSocket.id}`);
                     
+                    // For receiver: chatId should be the sender's ID (so they know which conversation)
+                    const messageForReceiver = {
+                        ...telegramMessage,
+                        chatId: socket.userId // For receiver, chatId is sender's ID
+                    };
+                    
                     // Send message directly to the receiver
-                    targetSocket.emit('new_message', telegramMessage, (ack) => {
+                    targetSocket.emit('new_message', messageForReceiver, (ack) => {
                         if (ack && ack.received) {
                             telegramMessage.markAsDelivered(receiverId);
                             console.log(`✅ Message ${telegramMessage.id} delivered to ${receiverId}`);

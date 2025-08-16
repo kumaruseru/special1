@@ -184,26 +184,29 @@ class TelegramMessaging {
             text: message.text || message.content || '',
             senderId: message.senderId,
             senderName: message.senderName || 'Unknown',
-            chatId: message.chatId || message.conversationId,
+            chatId: message.chatId || message.conversationId || message.senderId,
             timestamp: new Date(message.timestamp),
             type: message.type || 'text',
             status: 'received'
         };
 
         this.messages.set(message.id, telegramMessage);
-
-        // Update chat
-        this.updateChatLastMessage(telegramMessage);
         
-        // Render if current chat
-        if (telegramMessage.chatId === this.currentChat?.id) {
+        console.log('🎯 Processing incoming message for chat:', telegramMessage.chatId);
+        console.log('🎯 Current chat ID:', this.currentChat?.id);
+
+        // ALWAYS update the conversations list first (like Telegram)
+        this.updateConversationsList(telegramMessage);
+        
+        // If we're currently viewing this chat, show the message immediately
+        if (this.currentChat && telegramMessage.chatId === this.currentChat.id) {
+            console.log('✅ Adding message to current chat view');
             this.renderMessage(telegramMessage);
             this.scrollToBottom();
-        }
-
-        // Show notification if not current chat
-        if (telegramMessage.chatId !== this.currentChat?.id) {
-            this.showNotification(telegramMessage);
+        } else {
+            console.log('📱 Message for different chat, updated conversations list only');
+            // Show notification/badge for other chats
+            this.showNotificationBadge(telegramMessage.chatId);
         }
     }
 
@@ -250,6 +253,9 @@ class TelegramMessaging {
             // Store current chat
             this.currentChat = { id: chatId };
             localStorage.setItem('currentChatId', chatId);
+            
+            // Remove unread badge when opening chat (like Telegram)
+            this.clearNotificationBadge(chatId);
             
             // Show chat window and hide placeholder
             const chatWindow = document.getElementById('chat-window');
@@ -708,6 +714,100 @@ class TelegramMessaging {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Update conversations list in real-time (like Telegram)
+    updateConversationsList(message) {
+        console.log('🔄 Updating conversations list with new message:', message);
+        
+        const conversationsList = document.getElementById('conversations-list');
+        if (!conversationsList) {
+            console.warn('⚠️ Conversations list not found');
+            return;
+        }
+
+        // Find existing conversation item
+        const conversationItem = conversationsList.querySelector(`[data-user-id="${message.chatId}"]`);
+        
+        if (conversationItem) {
+            // Update existing conversation
+            console.log('📝 Updating existing conversation preview');
+            
+            // Update last message preview
+            const lastMessageEl = conversationItem.querySelector('.text-sm.text-gray-400');
+            if (lastMessageEl) {
+                lastMessageEl.textContent = message.text.length > 30 ? 
+                    message.text.substring(0, 30) + '...' : message.text;
+            }
+            
+            // Update timestamp
+            const timeEl = conversationItem.querySelector('.text-xs.text-gray-500');
+            if (timeEl) {
+                timeEl.textContent = this.formatTime(message.timestamp);
+            }
+            
+            // Move to top of list (like Telegram)
+            conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
+        } else {
+            // Create new conversation item if not exists
+            console.log('➕ Creating new conversation item');
+            this.loadConversationsFromAPI(); // Reload conversations to get the new one
+        }
+    }
+
+    // Show notification badge (like Telegram's unread count)
+    showNotificationBadge(chatId) {
+        console.log('🔴 Adding notification badge for chat:', chatId);
+        
+        const conversationItem = document.querySelector(`[data-user-id="${chatId}"]`);
+        if (conversationItem) {
+            // Add unread badge
+            let badge = conversationItem.querySelector('.unread-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'unread-badge bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-auto';
+                badge.textContent = '1';
+                
+                // Add to conversation item
+                const contentDiv = conversationItem.querySelector('.flex.items-center.gap-4');
+                if (contentDiv) {
+                    contentDiv.appendChild(badge);
+                }
+            } else {
+                // Increment badge count
+                const count = parseInt(badge.textContent) || 0;
+                badge.textContent = count + 1;
+            }
+        }
+    }
+
+    formatTime(timestamp) {
+        const now = new Date();
+        const messageTime = new Date(timestamp);
+        const diff = now - messageTime;
+        
+        if (diff < 60000) { // Less than 1 minute
+            return 'now';
+        } else if (diff < 3600000) { // Less than 1 hour
+            return Math.floor(diff / 60000) + 'm';
+        } else if (diff < 86400000) { // Less than 1 day
+            return Math.floor(diff / 3600000) + 'h';
+        } else {
+            return messageTime.toLocaleDateString();
+        }
+    }
+
+    // Clear notification badge when user opens chat
+    clearNotificationBadge(chatId) {
+        console.log('🧹 Clearing notification badge for chat:', chatId);
+        
+        const conversationItem = document.querySelector(`[data-user-id="${chatId}"]`);
+        if (conversationItem) {
+            const badge = conversationItem.querySelector('.unread-badge');
+            if (badge) {
+                badge.remove();
+            }
+        }
     }
 
     showNotification(message) {
