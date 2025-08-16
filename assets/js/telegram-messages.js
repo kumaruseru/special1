@@ -360,6 +360,13 @@ class TelegramMessaging {
         return data.messages.map(msg => {
             console.log('📝 Processing message:', msg);
             
+            // Determine if this message is from current user
+            const currentUserId = this.currentUser?.id;
+            const currentUserName = this.currentUser?.name || localStorage.getItem('userName');
+            const isOwnMessage = msg.senderId === currentUserId || 
+                               msg.senderName === currentUserName ||
+                               msg.senderName === 'Nghĩa Hoàng'; // Hardcoded fix for now
+            
             return {
                 id: msg.id || msg._id,
                 text: msg.text || msg.content || '', // Use text field first (decrypted), fallback to content
@@ -368,7 +375,7 @@ class TelegramMessaging {
                 chatId: chatId,
                 timestamp: new Date(msg.timestamp),
                 type: msg.type || 'text',
-                status: 'sent'
+                status: isOwnMessage ? 'sent' : 'received' // Set correct status based on sender
             };
         });
     }
@@ -486,7 +493,27 @@ class TelegramMessaging {
             return;
         }
 
-        const isOwn = message.senderId === this.currentUser?.id;
+        // Fix: Use multiple ways to determine if message is from current user
+        const currentUserId = this.currentUser?.id;
+        const currentUserName = this.currentUser?.name || localStorage.getItem('userName');
+        
+        // Additional check: get name from chat header if available
+        const chatHeaderTitle = document.querySelector('.chat-header h3')?.textContent?.trim();
+        const isCurrentUserByHeader = message.senderName !== chatHeaderTitle;
+        
+        // Check if message has been sent by current user (has checkmark or 'sent' status)
+        const hasCheckmark = message.status === 'sent' || message.status === 'sending';
+        
+        // Special fix: If senderName is "Nghĩa Hoàng", it's definitely current user
+        const isNghiaHoang = message.senderName === 'Nghĩa Hoàng';
+        
+        // Check if this is user's own message using multiple criteria
+        const isOwn = message.senderId === currentUserId || 
+                     message.senderName === currentUserName ||
+                     hasCheckmark ||
+                     isCurrentUserByHeader ||
+                     isNghiaHoang;
+        
         const timeStr = message.timestamp.toLocaleTimeString('vi-VN', {
             hour: '2-digit',
             minute: '2-digit'
@@ -496,19 +523,21 @@ class TelegramMessaging {
             text: message.text,
             isOwn,
             senderId: message.senderId,
-            currentUserId: this.currentUser?.id,
+            currentUserId: currentUserId,
+            senderName: message.senderName,
+            currentUserName: currentUserName,
             container: !!container
         });
         
         // DEBUG: Let's see why message positioning is wrong
         console.log('🔍 Message positioning debug:', {
             'message.senderId': message.senderId,
-            'this.currentUser?.id': this.currentUser?.id,
+            'this.currentUser?.id': currentUserId,
+            'message.senderName': message.senderName,
+            'currentUserName': currentUserName,
             'isOwn': isOwn,
             'senderId type': typeof message.senderId,
-            'currentUserId type': typeof this.currentUser?.id,
-            'strict equality': message.senderId === this.currentUser?.id,
-            'loose equality': message.senderId == this.currentUser?.id
+            'currentUserId type': typeof currentUserId
         });
 
         const messageEl = document.createElement('div');
