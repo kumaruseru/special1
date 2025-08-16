@@ -398,15 +398,16 @@ class TelegramMessaging {
     async sendMessageViaAPI(message) {
         console.log('📤 Sending message via API:', message);
         
-        const response = await fetch(`/api/conversations/${message.chatId}/messages`, {
+        const response = await fetch(`/api/messages`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
             },
             body: JSON.stringify({
-                text: message.text,
-                type: 'text'
+                receiverId: message.chatId,
+                content: message.text,
+                isEncrypted: false
             })
         });
 
