@@ -1073,6 +1073,7 @@ window.renderConversations = function(conversations) {
         if (!conversationId) {
             console.error('❌ No valid conversation ID found for:', conv);
             console.log('Available conversation properties:', Object.keys(conv));
+            console.log('Conv.id:', conv.id, 'Conv._id:', conv._id);
             return ''; // Skip this conversation
         }
         
@@ -1081,20 +1082,23 @@ window.renderConversations = function(conversations) {
         // Find the other participant (not current user)
         let otherUser = null;
         
-        if (conv.participants && Array.isArray(conv.participants)) {
+        if (conv.participants && Array.isArray(conv.participants) && conv.participants.length > 0) {
             otherUser = conv.participants.find(p => 
                 (p.id || p._id) !== (currentUser.id || currentUser._id)
             );
+            console.log('✅ Found otherUser from participants:', otherUser);
         }
         
         // Fallback to direct user properties
         if (!otherUser && conv.user) {
             otherUser = conv.user;
+            console.log('✅ Found otherUser from conv.user:', otherUser);
         }
         
         // Additional fallback - use conversation data directly
         if (!otherUser && conv.otherUser) {
             otherUser = conv.otherUser;
+            console.log('✅ Found otherUser from conv.otherUser:', otherUser);
         }
         
         // Extract name safely
