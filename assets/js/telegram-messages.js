@@ -1450,3 +1450,115 @@ window.renderConversations = function(conversations) {
 };
 
 console.log('🚀 Telegram-style messaging system loaded');
+
+// === CALLING SYSTEM INTEGRATION ===
+class TelegramCallSystem {
+    constructor() {
+        this.currentCall = null;
+        this.socket = null;
+        this.initializeCallButtons();
+    }
+
+    initializeCallButtons() {
+        document.addEventListener('DOMContentLoaded', () => {
+            const voiceCallBtn = document.getElementById('voice-call-btn');
+            const videoCallBtn = document.getElementById('video-call-btn');
+
+            if (voiceCallBtn) {
+                voiceCallBtn.addEventListener('click', () => this.initiateCall('voice'));
+            }
+            if (videoCallBtn) {
+                videoCallBtn.addEventListener('click', () => this.initiateCall('video'));
+            }
+        });
+    }
+
+    async initiateCall(type) {
+        // Get current chat info
+        const currentChat = window.telegramMessaging?.currentChat;
+        if (!currentChat || !currentChat.id) {
+            this.showError('Vui lòng chọn cuộc trò chuyện để bắt đầu cuộc gọi');
+            return;
+        }
+
+        // Get chat user info
+        const chatUserName = document.getElementById('chat-user-name')?.textContent || 'Unknown User';
+        const chatUserAvatar = document.getElementById('chat-user-avatar')?.src || '';
+
+        console.log(`📞 Initiating ${type} call to:`, chatUserName);
+
+        // Prepare call info
+        const callInfo = {
+            type: type, // 'voice' or 'video'
+            contact: chatUserName,
+            contactId: currentChat.id,
+            avatar: chatUserAvatar,
+            state: 'outgoing',
+            timestamp: Date.now()
+        };
+
+        // Store call info for the call window
+        localStorage.setItem('currentCall', JSON.stringify(callInfo));
+
+        // Send call initiation through socket
+        if (window.telegramMessaging?.socket?.connected) {
+            window.telegramMessaging.socket.emit('initiate_call', {
+                targetUserId: currentChat.id,
+                callType: type,
+                callerName: window.telegramMessaging.currentUser?.name || 'Unknown',
+                callerAvatar: window.telegramMessaging.currentUser?.avatar || ''
+            });
+        }
+
+        // Open call window
+        this.openCallWindow();
+    }
+
+    openCallWindow() {
+        // Calculate optimal window size and position
+        const width = 800;
+        const height = 600;
+        const left = Math.round((screen.width - width) / 2);
+        const top = Math.round((screen.height - height) / 2);
+
+        // Open call window
+        const callWindow = window.open(
+            'calls.html',
+            'cosmicCall',
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+        );
+
+        if (!callWindow) {
+            this.showError('Không thể mở cửa sổ cuộc gọi. Vui lòng cho phép popup trong trình duyệt.');
+            return;
+        }
+
+        // Store reference
+        this.currentCall = callWindow;
+
+        // Focus the call window
+        callWindow.focus();
+
+        console.log('📞 Call window opened successfully');
+    }
+
+    showError(message) {
+        // Show error notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+}
+
+// Initialize call system
+const telegramCallSystem = new TelegramCallSystem();
+
+// Make it globally accessible
+window.telegramCallSystem = telegramCallSystem;
