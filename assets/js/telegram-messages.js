@@ -866,10 +866,22 @@ window.TelegramMessaging = TelegramMessaging;
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DOM Content Loaded - Initializing Telegram messaging');
+    
     window.telegramMessaging = new TelegramMessaging();
     
     // Also set as realTimeMessaging for compatibility
     window.realTimeMessaging = window.telegramMessaging;
+    
+    // Force load conversations after a short delay
+    setTimeout(() => {
+        console.log('📋 Force loading conversations...');
+        if (typeof window.loadRealConversations === 'function') {
+            window.loadRealConversations();
+        } else {
+            console.error('❌ loadRealConversations function not found!');
+        }
+    }, 1000);
 });
 
 // Global conversation selection (Telegram-style)
@@ -937,11 +949,24 @@ window.loadRealConversations = async function() {
     try {
         console.log('📋 Loading Telegram conversations...');
         const token = localStorage.getItem('token') || '';
+        
+        // Show loading state
+        const conversationsList = document.getElementById('conversations-list');
+        if (conversationsList) {
+            conversationsList.innerHTML = `
+                <div class="p-4 text-center text-gray-400">
+                    <div class="animate-pulse">📡 Đang tải cuộc trò chuyện...</div>
+                </div>
+            `;
+        }
+        
         const response = await fetch('/api/conversations', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
+
+        console.log('🔍 API Response status:', response.status);
 
         if (response.ok) {
             const data = await response.json();
@@ -951,14 +976,40 @@ window.loadRealConversations = async function() {
                 console.log(`✅ Loaded ${data.conversations.length} Telegram conversations`);
                 console.log('📋 First conversation details:', data.conversations[0]);
                 window.renderConversations(data.conversations);
+            } else {
+                console.warn('⚠️ No conversations in response or success=false');
+                showEmptyConversations();
             }
         } else {
             console.error('❌ API response not ok:', response.status, response.statusText);
+            showEmptyConversations();
         }
     } catch (error) {
         console.error('❌ Load Telegram conversations failed:', error);
+        showEmptyConversations();
     }
 };
+
+// Show empty state
+function showEmptyConversations() {
+    const conversationsList = document.getElementById('conversations-list');
+    if (conversationsList) {
+        conversationsList.innerHTML = `
+            <div class="p-4 text-center text-gray-400">
+                <div class="mb-4">
+                    <svg class="w-16 h-16 mx-auto text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                </div>
+                <p class="text-lg font-medium">Chưa có cuộc trò chuyện</p>
+                <p class="text-sm mt-2">Tìm bạn bè để bắt đầu chat!</p>
+                <button onclick="window.location.href='discovery.html'" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                    Tìm bạn bè
+                </button>
+            </div>
+        `;
+    }
+}
 
 // Render conversations function with proper name display
 window.renderConversations = function(conversations) {
