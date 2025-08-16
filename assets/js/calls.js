@@ -344,6 +344,21 @@ const IncomingCall = ({ setCallState }) => {
             console.log('✅ Accept call button clicked');
             console.log('📞 Current call info:', callInfo);
             
+            // Stop ringtone
+            stopRingtone();
+            
+            // Update call session state in localStorage
+            if (callInfo) {
+                const updatedCallInfo = {
+                    ...callInfo,
+                    state: 'active',
+                    connectionState: 'connected',
+                    acceptedTime: new Date().toISOString()
+                };
+                localStorage.setItem('currentCall', JSON.stringify(updatedCallInfo));
+                console.log('📞 [CALLS] Updated call session to active state');
+            }
+            
             // Ensure WebRTC client has the callId
             if (window.webrtcClient && callInfo?.callId) {
                 window.webrtcClient.currentCallId = callInfo.callId;

@@ -1885,7 +1885,45 @@ class TelegramCallSystem {
     }
 
     handleCallAccepted(data) {
-        console.log('✅ Call accepted by remote user');
+        console.log('✅ [TELEGRAM] Call accepted by remote user:', data);
+        
+        // Clear call timeout since call is now active
+        if (this.callTimeout) {
+            console.log('⏰ [TELEGRAM] Clearing call timeout - call accepted');
+            clearTimeout(this.callTimeout);
+            this.callTimeout = null;
+        }
+        
+        // Update call session state
+        const currentCall = localStorage.getItem('currentCall');
+        if (currentCall) {
+            try {
+                const callSession = JSON.parse(currentCall);
+                callSession.state = 'active';
+                callSession.connectionState = 'connected';
+                callSession.acceptedTime = new Date().toISOString();
+                
+                // Store updated session
+                localStorage.setItem('currentCall', JSON.stringify(callSession));
+                console.log('📞 [TELEGRAM] Call session updated to active state');
+                
+                // Update UI state if we're on call page
+                if (window.updateCallState) {
+                    console.log('🎨 [TELEGRAM] Updating UI call state to: active');
+                    window.updateCallState('active');
+                }
+                
+                // If we're not on call page, redirect to calls page
+                if (!window.location.pathname.includes('calls.html')) {
+                    console.log('🔄 [TELEGRAM] Redirecting to call interface');
+                    window.location.href = './calls.html';
+                }
+                
+            } catch (error) {
+                console.error('❌ Error updating call session:', error);
+            }
+        }
+        
         this.showCallNotification('Cuộc gọi đã được chấp nhận', 'success');
     }
 

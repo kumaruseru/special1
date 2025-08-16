@@ -236,8 +236,18 @@ class WebRTCClient {
     // Handle call accepted
     async handleCallAccepted(data) {
         try {
+            console.log('✅ [WEBRTC] Call accepted, establishing connection');
+            
+            // Clear any call timeouts
+            if (window.telegramMessaging?.callTimeout) {
+                console.log('⏰ [WEBRTC] Clearing call timeout');
+                clearTimeout(window.telegramMessaging.callTimeout);
+                window.telegramMessaging.callTimeout = null;
+            }
+            
             // Create and send offer if we're the initiator
             if (this.isInitiator && this.peerConnection) {
+                console.log('📞 [WEBRTC] Creating offer as call initiator');
                 const offer = await this.peerConnection.createOffer();
                 await this.peerConnection.setLocalDescription(offer);
                 
@@ -245,9 +255,11 @@ class WebRTCClient {
                     callId: this.currentCallId,
                     offer: offer
                 });
+                
+                console.log('📤 [WEBRTC] Offer sent to remote peer');
             }
         } catch (error) {
-            console.error('Error handling call accepted:', error);
+            console.error('❌ [WEBRTC] Error handling call accepted:', error);
         }
     }
 
