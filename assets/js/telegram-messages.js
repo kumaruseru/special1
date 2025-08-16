@@ -57,6 +57,23 @@ class TelegramMessaging {
     // === SOCKET CONNECTION ===
     initSocket() {
         try {
+            // Check if Socket.IO is available
+            if (typeof io === 'undefined') {
+                console.warn('⚠️ Socket.IO not yet loaded, will retry...');
+                // Wait for Socket.IO to load
+                if (window.socketIOLoaded) {
+                    this.initSocket();
+                    return;
+                }
+                
+                // Listen for Socket.IO ready event
+                window.addEventListener('socketio-ready', () => {
+                    console.log('🔄 Socket.IO ready, initializing connection...');
+                    this.initSocket();
+                });
+                return;
+            }
+
             this.socket = io({
                 transports: ['websocket', 'polling'],
                 reconnection: true,

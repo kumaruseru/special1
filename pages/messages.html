@@ -67,11 +67,23 @@
                 'https://cdn.socket.io/4.8.1/socket.io.min.js' : 
                 '/socket.io/socket.io.js';
             
+            script.onload = function() {
+                console.log('✅ Socket.IO loaded successfully');
+                window.socketIOLoaded = true;
+                // Trigger custom event when Socket.IO is ready
+                window.dispatchEvent(new Event('socketio-ready'));
+            };
+            
             script.onerror = function() {
                 if (!isProduction) {
                     // Fallback to CDN if local fails
                     const fallbackScript = document.createElement('script');
                     fallbackScript.src = 'https://cdn.socket.io/4.8.1/socket.io.min.js';
+                    fallbackScript.onload = function() {
+                        console.log('✅ Socket.IO loaded via fallback CDN');
+                        window.socketIOLoaded = true;
+                        window.dispatchEvent(new Event('socketio-ready'));
+                    };
                     document.head.appendChild(fallbackScript);
                 }
             };
