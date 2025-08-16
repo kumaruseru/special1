@@ -746,9 +746,6 @@ const App = () => {
                 console.warn('⚠️ Unknown call state:', callState, 'falling back to incoming');
                 return <IncomingCall setCallState={setCallState} />;
         }
-    }
-                return <IncomingCall setCallState={setCallState} />;
-        }
     };
 
     return (
