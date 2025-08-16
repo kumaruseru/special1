@@ -1016,6 +1016,11 @@ window.loadRealConversations = async function() {
         if (response.ok) {
             const data = await response.json();
             console.log('🔍 API Response full data:', data);
+            console.log('🔍 API Response conversations array:', data.conversations);
+            
+            if (data.conversations && data.conversations.length > 0) {
+                console.log('🔍 First conversation raw structure:', JSON.stringify(data.conversations[0], null, 2));
+            }
             
             if (data.success && data.conversations) {
                 console.log(`✅ Loaded ${data.conversations.length} Telegram conversations`);
