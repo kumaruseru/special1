@@ -1209,13 +1209,15 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
         // Enrich conversations with participant data
         const enrichedConversations = await Promise.all(
             conversations.map(async (conv) => {
+                console.log('🔍 Processing conversation:', conv._id.toString());
+                
                 // Get other participant info
                 const otherParticipantIds = conv.participantIds.filter(id => id !== userId);
                 const participants = await usersCollection.find({
                     _id: { $in: otherParticipantIds.map(id => new ObjectId(id)) }
                 }).toArray();
 
-                return {
+                const enrichedConv = {
                     id: conv._id.toString(),
                     participants: participants.map(user => ({
                         id: user._id.toString(),
@@ -1230,8 +1232,21 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
                     unreadCount: 0, // TODO: Implement unread count
                     createdAt: conv.createdAt
                 };
+                
+                console.log('🔍 Enriched conversation:', {
+                    id: enrichedConv.id,
+                    participantCount: enrichedConv.participants.length,
+                    hasLastMessage: !!enrichedConv.lastMessage
+                });
+                
+                return enrichedConv;
             })
         );
+
+        console.log('📤 Sending enriched conversations:', enrichedConversations.map(c => ({
+            id: c.id,
+            participantCount: c.participants?.length || 0
+        })));
 
         res.json({
             success: true,

@@ -185,10 +185,33 @@ class TelegramMessaging {
     async loadChat(chatId) {
         console.log('💬 Loading Telegram chat:', chatId);
         
+        // Validate chat ID
+        if (!chatId || chatId === 'undefined' || chatId === 'null') {
+            console.error('❌ Invalid chat ID for loadChat:', chatId);
+            this.showError('Không thể tải cuộc trò chuyện: ID không hợp lệ');
+            return;
+        }
+        
         try {
             // Store current chat
             this.currentChat = { id: chatId };
             localStorage.setItem('currentChatId', chatId);
+            
+            // Show chat window and hide placeholder
+            const chatWindow = document.getElementById('chat-window');
+            const placeholder = document.getElementById('empty-chat-placeholder');
+            
+            if (chatWindow) {
+                chatWindow.classList.remove('hidden');
+                chatWindow.style.display = 'flex';
+                console.log('✅ Chat window shown');
+            }
+            
+            if (placeholder) {
+                placeholder.classList.add('hidden');
+                placeholder.style.display = 'none';
+                console.log('✅ Placeholder hidden');
+            }
             
             // Update chat header with saved user info
             const savedChatUser = localStorage.getItem('currentChatUser');
@@ -886,6 +909,13 @@ document.addEventListener('DOMContentLoaded', () => {
 window.selectConversation = function(conversationId, userName, userAvatar) {
     console.log('🎯 Telegram: Selecting conversation:', conversationId, userName);
     
+    // Validate conversation ID
+    if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
+        console.error('❌ Invalid conversation ID:', conversationId);
+        window.showTelegramError('Không thể chọn cuộc trò chuyện: ID không hợp lệ');
+        return;
+    }
+    
     if (window.telegramMessaging) {
         // Save chat user info
         localStorage.setItem('currentChatUser', JSON.stringify({
@@ -1035,6 +1065,14 @@ window.renderConversations = function(conversations) {
     conversationsList.innerHTML = conversations.map(conv => {
         console.log('📋 Processing conversation:', conv);
         
+        // Get conversation ID - check multiple possible fields
+        const conversationId = conv.id || conv._id || conv.conversationId;
+        
+        if (!conversationId) {
+            console.error('❌ No valid conversation ID found for:', conv);
+            return ''; // Skip this conversation
+        }
+        
         // Find the other participant (not current user)
         let otherUser = null;
         
@@ -1061,10 +1099,11 @@ window.renderConversations = function(conversations) {
         }
         
         console.log('👤 Rendering conversation with:', {
-            conversationId: conv.id,
+            conversationId,
             displayName,
             avatar,
-            otherUser
+            otherUser,
+            originalConv: conv
         });
         
         const lastMessage = conv.lastMessage || {};
@@ -1075,8 +1114,8 @@ window.renderConversations = function(conversations) {
 
         return `
             <div class="conversation-item p-4 hover:bg-gray-700/30 cursor-pointer border-b border-gray-700/30 transition-colors" 
-                 data-conversation-id="${conv.id}"
-                 onclick="selectConversation('${conv.id}', '${displayName}', '${avatar}')">
+                 data-conversation-id="${conversationId}"
+                 onclick="selectConversation('${conversationId}', '${displayName.replace(/'/g, "\\'")}', '${avatar}')">
                 <div class="flex items-center space-x-3">
                     <img src="${avatar}" alt="${displayName}" class="w-12 h-12 rounded-full object-cover">
                     <div class="flex-1 min-w-0">
@@ -1089,7 +1128,7 @@ window.renderConversations = function(conversations) {
                 </div>
             </div>
         `;
-    }).join('');
+    }).filter(html => html.length > 0).join(''); // Filter out empty results
     
     console.log('✅ Conversations rendered successfully');
 };
