@@ -881,14 +881,104 @@ window.loadRealConversations = async function() {
 
         if (response.ok) {
             const data = await response.json();
+            console.log('🔍 API Response full data:', data);
+            
             if (data.success && data.conversations) {
                 console.log(`✅ Loaded ${data.conversations.length} Telegram conversations`);
+                console.log('📋 First conversation details:', data.conversations[0]);
                 window.renderConversations(data.conversations);
             }
+        } else {
+            console.error('❌ API response not ok:', response.status, response.statusText);
         }
     } catch (error) {
         console.error('❌ Load Telegram conversations failed:', error);
     }
+};
+
+// Render conversations function with proper name display
+window.renderConversations = function(conversations) {
+    console.log('🎨 Rendering conversations:', conversations);
+    
+    const conversationsList = document.getElementById('conversations-list');
+    if (!conversationsList) {
+        console.error('❌ Conversations list element not found');
+        return;
+    }
+
+    if (!conversations || conversations.length === 0) {
+        conversationsList.innerHTML = `
+            <div class="text-center py-8 text-gray-400">
+                <p>📭 Chưa có cuộc trò chuyện nào</p>
+                <p class="text-sm mt-2">Tìm bạn bè để bắt đầu chat!</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Get current user for comparison
+    const currentUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('userInfo') || '{}');
+    
+    conversationsList.innerHTML = conversations.map(conv => {
+        console.log('📋 Processing conversation:', conv);
+        
+        // Find the other participant (not current user)
+        let otherUser = null;
+        
+        if (conv.participants && Array.isArray(conv.participants)) {
+            otherUser = conv.participants.find(p => p.id !== currentUser.id);
+        }
+        
+        // Fallback to direct user properties
+        if (!otherUser && conv.user) {
+            otherUser = conv.user;
+        }
+        
+        // Extract name safely
+        let displayName = 'Người dùng';
+        let avatar = 'https://placehold.co/48x48/4F46E5/FFFFFF?text=U';
+        
+        if (otherUser) {
+            displayName = otherUser.name || otherUser.fullName || otherUser.username || 'Người dùng';
+            if (otherUser.avatar) {
+                avatar = otherUser.avatar;
+            } else {
+                avatar = `https://placehold.co/48x48/4F46E5/FFFFFF?text=${displayName.charAt(0).toUpperCase()}`;
+            }
+        }
+        
+        console.log('👤 Rendering conversation with:', {
+            conversationId: conv.id,
+            displayName,
+            avatar,
+            otherUser
+        });
+        
+        const lastMessage = conv.lastMessage || {};
+        const lastMessageText = lastMessage.content || lastMessage.text || 'Chưa có tin nhắn';
+        const timestamp = lastMessage.timestamp ? 
+            new Date(lastMessage.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 
+            '';
+
+        return `
+            <div class="conversation-item p-4 hover:bg-gray-700/30 cursor-pointer border-b border-gray-700/30 transition-colors" 
+                 data-conversation-id="${conv.id}"
+                 onclick="selectConversation('${conv.id}', '${displayName}', '${avatar}')">
+                <div class="flex items-center space-x-3">
+                    <img src="${avatar}" alt="${displayName}" class="w-12 h-12 rounded-full object-cover">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-white truncate">${displayName}</h3>
+                            ${timestamp ? `<span class="text-xs text-gray-400 timestamp">${timestamp}</span>` : ''}
+                        </div>
+                        <p class="text-sm text-gray-400 truncate last-message">${lastMessageText}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    console.log('✅ Conversations rendered successfully');
 };
 
 console.log('🚀 Telegram-style messaging system loaded');

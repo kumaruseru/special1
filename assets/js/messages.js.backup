@@ -2843,11 +2843,37 @@ window.renderConversations = function(conversations) {
             isOnline = otherUser.online || false;
         } else if (conv.participants) {
             // Participants format
-            otherUser = conv.participants.find(p => p.id !== window.realTimeMessaging?.currentUser?.id);
+            console.log('🔍 All participants:', conv.participants);
+            console.log('🔍 Current user from telegram:', window.telegramMessaging?.currentUser);
+            console.log('🔍 Current user from real-time:', window.realTimeMessaging?.currentUser);
+            
+            // Try multiple sources for current user ID
+            const currentUserId = window.telegramMessaging?.currentUser?.id || 
+                                window.realTimeMessaging?.currentUser?.id ||
+                                localStorage.getItem('userId') ||
+                                localStorage.getItem('currentUserId');
+            
+            console.log('🔍 Using current user ID:', currentUserId);
+            
+            otherUser = conv.participants.find(p => p.id !== currentUserId);
+            
+            // If no otherUser found, just use the first participant
+            if (!otherUser && conv.participants.length > 0) {
+                otherUser = conv.participants[0];
+                console.log('🔍 No other user found, using first participant:', otherUser);
+            }
+            
+            console.log('🔍 Other user found:', otherUser);
+            
+            // Better name extraction
             userName = otherUser?.name || 
                       otherUser?.username || 
                       otherUser?.email?.split('@')[0] ||
+                      otherUser?.id?.substring(0, 8) ||
                       'Người dùng';
+            
+            console.log('🔍 Final userName:', userName);
+            
             userAvatar = otherUser?.avatar || `https://placehold.co/48x48/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
             
             // Handle lastMessage object or string
