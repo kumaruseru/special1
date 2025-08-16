@@ -1852,12 +1852,9 @@ class TelegramCallSystem {
         // Store call info
         localStorage.setItem('currentCall', JSON.stringify(callInfo));
         
-        // Open call window in new tab
-        const callWindow = window.open('calls.html', '_blank');
-        if (callWindow) {
-            this.currentCall = callWindow;
-            console.log('📞 Call accepted - opened in new tab');
-        }
+        // Navigate to call page in current tab instead of opening new window
+        console.log('📞 Call accepted - navigating to call interface');
+        window.location.href = 'calls.html';
     }
 
     rejectCall(callId) {
@@ -1907,16 +1904,14 @@ class TelegramCallSystem {
                 localStorage.setItem('currentCall', JSON.stringify(callSession));
                 console.log('📞 [TELEGRAM] Call session updated to active state');
                 
-                // Update UI state if we're on call page
+                // Update UI state if we're on call page (caller should already be on call page)
                 if (window.updateCallState) {
                     console.log('🎨 [TELEGRAM] Updating UI call state to: active');
                     window.updateCallState('active');
-                }
-                
-                // If we're not on call page, redirect to calls page
-                if (!window.location.pathname.includes('calls.html')) {
-                    console.log('🔄 [TELEGRAM] Redirecting to call interface');
-                    window.location.href = './calls.html';
+                } else if (window.location.pathname.includes('home.html')) {
+                    // Only handle callee side redirect if on message page
+                    console.log('� [TELEGRAM] Callee received call accepted notification');
+                    // Show notification instead of redirect to avoid double tabs
                 }
                 
             } catch (error) {
