@@ -160,12 +160,19 @@ class TelegramMessaging {
 
         // Telegram-style message events
         this.socket.on('new_message', (message, ack) => {
+            console.log('🔔 Socket received new_message event:', message);
             this.handleIncomingMessage(message);
             // Send acknowledgment that message was received
             if (ack) ack({ received: true, timestamp: Date.now() });
         });
-        this.socket.on('message', (message) => this.handleIncomingMessage(message));
-        this.socket.on('broadcast_message', (message) => this.handleIncomingMessage(message));
+        this.socket.on('message', (message) => {
+            console.log('🔔 Socket received message event:', message);
+            this.handleIncomingMessage(message);
+        });
+        this.socket.on('broadcast_message', (message) => {
+            console.log('🔔 Socket received broadcast_message event:', message);
+            this.handleIncomingMessage(message);
+        });
         this.socket.on('message_sent', (data) => this.handleMessageSent(data));
         this.socket.on('message_delivered', (data) => this.handleMessageDelivered(data));
         this.socket.on('typing_start', (data) => this.handleTypingStart(data));
@@ -176,9 +183,16 @@ class TelegramMessaging {
 
     handleAuthenticated(data) {
         console.log('✅ Socket.IO authentication successful:', data);
+        console.log('🔗 Socket ID:', this.socket.id);
+        console.log('👤 Authenticated user:', data.user);
         this.isAuthenticated = true;
+        
+        // Store current user info for debugging
+        this.currentUser = data.user;
+        
         // Join current chat room if we have one
         if (this.currentChat) {
+            console.log('📱 Joining chat room:', this.currentChat.id);
             this.socket.emit('join_room', { roomId: this.currentChat.id });
         }
     }
@@ -257,6 +271,8 @@ class TelegramMessaging {
 
     handleRoomJoined(data) {
         console.log('🏠 Room joined successfully:', data);
+        console.log('🏠 Connected users in room:', data.users || 'Not provided');
+        console.log('🏠 Room ID:', data.roomId || data.room);
     }
 
     handleJoinRoomError(data) {
@@ -321,7 +337,12 @@ class TelegramMessaging {
             
             // Join chat room
             if (this.socket?.connected) {
+                console.log('📱 Emitting join_room for chatId:', chatId);
+                console.log('📱 Socket connected status:', this.socket.connected);
+                console.log('📱 Socket authenticated status:', this.isAuthenticated);
                 this.socket.emit('join_room', { roomId: chatId });
+            } else {
+                console.warn('⚠️ Socket not connected, cannot join room');
             }
             
             // Load messages from API
