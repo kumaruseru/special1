@@ -112,7 +112,7 @@ window.onCallConnected = () => {
 };
 
 window.onCallEnded = () => {
-    console.log('📞 Call ended');
+    console.log('📞 Call ended - closing window immediately');
     // Stop all audio
     if (audioSystem) {
         if (audioSystem.ringtone) {
@@ -124,14 +124,15 @@ window.onCallEnded = () => {
         }
     }
     
-    // Close window after delay
-    setTimeout(() => {
-        if (window.opener) {
-            window.close();
-        } else {
-            window.location.href = '../pages/messages.html';
-        }
-    }, 2000);
+    // Clean up localStorage
+    localStorage.removeItem('currentCall');
+    
+    // Close window immediately (no delay)
+    if (window.opener) {
+        window.close();
+    } else {
+        window.location.href = '../pages/messages.html';
+    }
 };
 
 window.onCallDeclined = () => {
@@ -187,6 +188,13 @@ const OutgoingCall = ({ setCallState }) => {
     const handleEndCall = () => {
         console.log('🔴 End call button clicked');
         
+        // Prevent multiple rapid clicks
+        if (window.callEnding) {
+            console.log('⚠️ Call already ending, ignoring click');
+            return;
+        }
+        window.callEnding = true;
+        
         // Try multiple methods to end the call
         let callEnded = false;
         
@@ -207,23 +215,21 @@ const OutgoingCall = ({ setCallState }) => {
         // Method 3: Trigger global end call callback
         if (window.onCallEnded && typeof window.onCallEnded === 'function') {
             console.log('📞 Triggering onCallEnded callback');
-            window.onCallEnded();
+            setTimeout(() => window.onCallEnded(), 100); // Small delay to let other methods execute first
             callEnded = true;
         }
         
-        // Method 4: Fallback - just close the window
-        if (!callEnded) {
-            console.log('📞 Fallback: closing call window');
-            // Clean up localStorage
+        // Method 4: Immediate fallback - force close window
+        setTimeout(() => {
+            console.log('📞 Force closing window after 500ms');
             localStorage.removeItem('currentCall');
             
-            // Close window
             if (window.opener) {
                 window.close();
             } else {
                 window.location.href = '../pages/messages.html';
             }
-        }
+        }, 500);
     };
 
     return (
@@ -279,6 +285,13 @@ const IncomingCall = ({ setCallState }) => {
     const handleDeclineCall = () => {
         console.log('🔴 Decline call button clicked');
         
+        // Prevent multiple rapid clicks
+        if (window.callEnding) {
+            console.log('⚠️ Call already ending, ignoring click');
+            return;
+        }
+        window.callEnding = true;
+        
         // Try multiple methods to decline the call
         let callDeclined = false;
         
@@ -299,23 +312,21 @@ const IncomingCall = ({ setCallState }) => {
         // Method 3: Trigger global decline call callback
         if (window.onCallDeclined && typeof window.onCallDeclined === 'function') {
             console.log('📞 Triggering onCallDeclined callback');
-            window.onCallDeclined();
+            setTimeout(() => window.onCallDeclined(), 100);
             callDeclined = true;
         }
         
-        // Method 4: Fallback - just close the window
-        if (!callDeclined) {
-            console.log('📞 Fallback: closing call window');
-            // Clean up localStorage
+        // Method 4: Immediate fallback - force close window
+        setTimeout(() => {
+            console.log('📞 Force closing window after 500ms');
             localStorage.removeItem('currentCall');
             
-            // Close window
             if (window.opener) {
                 window.close();
             } else {
                 window.location.href = '../pages/messages.html';
             }
-        }
+        }, 500);
     };
 
     return (
@@ -426,6 +437,13 @@ const ActiveCall = ({ setCallState }) => {
     const handleEndCall = () => {
         console.log('🔴 End call button clicked (ActiveCall)');
         
+        // Prevent multiple rapid clicks
+        if (window.callEnding) {
+            console.log('⚠️ Call already ending, ignoring click');
+            return;
+        }
+        window.callEnding = true;
+        
         // Try multiple methods to end the call
         let callEnded = false;
         
@@ -446,23 +464,21 @@ const ActiveCall = ({ setCallState }) => {
         // Method 3: Trigger global end call callback
         if (window.onCallEnded && typeof window.onCallEnded === 'function') {
             console.log('📞 Triggering onCallEnded callback');
-            window.onCallEnded();
+            setTimeout(() => window.onCallEnded(), 100);
             callEnded = true;
         }
         
-        // Method 4: Fallback - just close the window
-        if (!callEnded) {
-            console.log('📞 Fallback: closing call window');
-            // Clean up localStorage
+        // Method 4: Immediate fallback - force close window
+        setTimeout(() => {
+            console.log('📞 Force closing window after 500ms');
             localStorage.removeItem('currentCall');
             
-            // Close window
             if (window.opener) {
                 window.close();
             } else {
                 window.location.href = '../pages/messages.html';
             }
-        }
+        }, 500);
     };
 
     const formatTime = (seconds) => {
