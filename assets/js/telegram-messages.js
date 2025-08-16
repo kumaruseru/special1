@@ -1310,11 +1310,14 @@ window.loadRealConversations = async function() {
                 showEmptyConversations();
             }
         } else {
+            const errorText = await response.text();
             console.error('❌ API response not ok:', response.status, response.statusText);
+            console.error('❌ Error response body:', errorText);
             showEmptyConversations();
         }
     } catch (error) {
         console.error('❌ Load Telegram conversations failed:', error);
+        console.error('❌ Error details:', error.message, error.stack);
         showEmptyConversations();
     }
 };
