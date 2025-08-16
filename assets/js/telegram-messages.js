@@ -1089,38 +1089,37 @@ window.renderConversations = function(conversations) {
         console.log('📋 Conversation keys:', Object.keys(conv));
         console.log('📋 Conversation participants:', conv.participants);
         
-        // Get conversation ID - check multiple possible fields
-        const conversationId = conv.id || conv._id || conv.conversationId || conv.otherUserId;
+        // Get conversation ID - fix for new server structure  
+        const conversationId = conv.partnerId || conv.id || conv._id || conv.conversationId || conv.otherUserId;
         
         if (!conversationId) {
             console.error('❌ No valid conversation ID found for:', conv);
             console.log('Available conversation properties:', Object.keys(conv));
-            console.log('Conv.id:', conv.id, 'Conv._id:', conv._id);
+            console.log('Conv.partnerId:', conv.partnerId, 'Conv.id:', conv.id, 'Conv._id:', conv._id);
             return ''; // Skip this conversation
         }
         
         console.log('✅ Found conversation ID:', conversationId);
         
-        // Find the other participant (not current user)
+        // Find the other participant - fix for new server structure
         let otherUser = null;
         
-        if (conv.participants && Array.isArray(conv.participants) && conv.participants.length > 0) {
+        // New structure: otherUser is directly available
+        if (conv.otherUser) {
+            otherUser = conv.otherUser;
+            console.log('✅ Found otherUser from conv.otherUser:', otherUser);
+        }
+        // Fallback: check participants array (old structure)
+        else if (conv.participants && Array.isArray(conv.participants) && conv.participants.length > 0) {
             otherUser = conv.participants.find(p => 
                 (p.id || p._id) !== (currentUser.id || currentUser._id)
             );
             console.log('✅ Found otherUser from participants:', otherUser);
         }
-        
-        // Fallback to direct user properties
-        if (!otherUser && conv.user) {
+        // Additional fallback
+        else if (conv.user) {
             otherUser = conv.user;
             console.log('✅ Found otherUser from conv.user:', otherUser);
-        }
-        
-        // Additional fallback - use conversation data directly
-        if (!otherUser && conv.otherUser) {
-            otherUser = conv.otherUser;
-            console.log('✅ Found otherUser from conv.otherUser:', otherUser);
         }
         
         // Extract name safely
