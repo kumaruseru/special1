@@ -420,6 +420,31 @@ class TelegramMessaging {
             return;
         }
 
+        // Ensure we have current user info
+        if (!this.currentUser) {
+            // Try to get user from localStorage or token
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const tokenData = JSON.parse(atob(token.split('.')[1]));
+                    this.currentUser = {
+                        id: tokenData.userId,
+                        name: tokenData.name || tokenData.username,
+                        email: tokenData.email
+                    };
+                    console.log('🔄 Retrieved user from token:', this.currentUser);
+                } catch (e) {
+                    console.error('❌ Failed to parse token for user info:', e);
+                }
+            }
+        }
+
+        if (!this.currentUser || !this.currentUser.id) {
+            console.error('❌ Cannot send message: currentUser not available');
+            this.showError('Không thể gửi tin nhắn: Thông tin người dùng không có');
+            return;
+        }
+
         const message = {
             id: this.generateMessageId(),
             text: text.trim(),
