@@ -191,6 +191,7 @@ class TelegramMessaging {
 
     handleIncomingMessage(message) {
         console.log('📨 Incoming Telegram message:', message);
+        console.log('📨 Raw message structure:', JSON.stringify(message, null, 2));
         
         if (!message || !message.id) {
             console.warn('⚠️ Invalid message received');
@@ -214,6 +215,7 @@ class TelegramMessaging {
         console.log('🎯 Processing incoming message for chat:', telegramMessage.chatId);
         console.log('🎯 Current chat ID:', this.currentChat?.id);
         console.log('🎯 Message senderId:', telegramMessage.senderId);
+        console.log('🎯 Current user ID:', this.currentUser?.id);
 
         // ALWAYS update the conversations list first (like Telegram)
         this.updateConversationsList(telegramMessage);
