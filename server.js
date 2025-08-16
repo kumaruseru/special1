@@ -2171,8 +2171,16 @@ io.on('connection', (socket) => {
             }
 
             // Store authenticated user info
+            console.log(`🔍 User object from DB:`, JSON.stringify({
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                username: user.username,
+                fullName: user.fullName
+            }, null, 2));
+            
             socket.userId = user._id.toString();
-            socket.username = user.name;
+            socket.username = user.name || user.username || user.fullName || user.email;
             socket.email = user.email;
             socket.isAuthenticated = true;
 
