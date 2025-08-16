@@ -4,16 +4,27 @@
   "description": "A modern space-themed social network application",
   "main": "index.html",
   "scripts": {
-    "start": "node server-production.js",
+    "start": "node server-secure.js",
     "dev": "node server-multi-db.js",
-    "production": "node server-production.js",
+    "production": "NODE_ENV=production node server-secure.js",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v && docker system prune -f",
     "static": "http-server -p 3000 -o -c-1",
     "build": "npm install && echo 'Build completed successfully!'",
-    "lint": "eslint assets/js/**/*.js"
+    "lint": "eslint assets/js/**/*.js",
+    "lint:fix": "eslint assets/js/**/*.js --fix",
+    "test": "echo 'No tests specified yet'",
+    "security:audit": "npm audit && npm audit fix",
+    "logs": "tail -f logs/app.log",
+    "pm2:start": "pm2 start server-secure.js --name cosmic-app",
+    "pm2:stop": "pm2 stop cosmic-app",
+    "pm2:restart": "pm2 restart cosmic-app",
+    "pm2:logs": "pm2 logs cosmic-app",
+    "backup": "node scripts/backup.js",
+    "restore": "node scripts/restore.js"
   },
   "keywords": [
     "social-network",
@@ -35,7 +46,10 @@
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
     "font-awesome": "^4.7.0",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.1",
@@ -43,6 +57,7 @@
     "nodemailer": "^6.9.7",
     "pg": "^8.16.3",
     "redis": "^5.8.0",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "winston": "^3.11.0"
   }
 }

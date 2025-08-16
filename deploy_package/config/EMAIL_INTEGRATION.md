@@ -2,12 +2,12 @@
 
 ## Production .env Configuration
 ```bash
-EMAIL_USER=noreply@cown.name.vn
-EMAIL_PASSWORD=Huong1505@
-EMAIL_HOST=smtp.cown.name.vn
+EMAIL_USER=your_email@yourdomain.com
+EMAIL_PASSWORD=your_app_password_here
+EMAIL_HOST=smtp.yourdomain.com
 EMAIL_PORT=587
-DOMAIN=cown.name.vn
-BASE_URL=https://cown.name.vn
+DOMAIN=yourdomain.com
+BASE_URL=https://yourdomain.com
 ```
 
 ## Required Dependencies
