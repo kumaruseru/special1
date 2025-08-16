@@ -4,25 +4,49 @@ let audioSystem = null;
 
 // Initialize call info from localStorage
 const initializeCallInfo = () => {
+    console.log('🔍 Checking localStorage for currentCall...');
     const storedCallInfo = localStorage.getItem('currentCall');
+    console.log('🔍 Raw localStorage data:', storedCallInfo);
+    
     if (storedCallInfo) {
-        callInfo = JSON.parse(storedCallInfo);
-        console.log('📞 Loaded call info:', callInfo);
+        try {
+            callInfo = JSON.parse(storedCallInfo);
+            console.log('📞 Successfully loaded call info:', callInfo);
+            
+            // Validate required fields
+            if (!callInfo.contact || !callInfo.type || !callInfo.state) {
+                console.warn('⚠️ Invalid call info, using fallback');
+                callInfo = createFallbackCallInfo();
+            }
+        } catch (e) {
+            console.error('❌ Failed to parse call info:', e);
+            callInfo = createFallbackCallInfo();
+        }
     } else {
-        // Fallback for testing
-        callInfo = {
-            type: 'video',
-            contact: 'Cosmic User',
-            state: 'incoming'
-        };
-        console.log('📞 Using fallback call info');
+        console.warn('⚠️ No stored call info found, using fallback');
+        callInfo = createFallbackCallInfo();
     }
     
-    // Set page title
-    document.title = `${callInfo.type === 'video' ? 'Video' : 'Voice'} Call - ${callInfo.contact}`;
+    // Set page title based on call info
+    const callTypeText = callInfo.type === 'video' ? 'Video Call' : 'Voice Call';
+    const callStateText = callInfo.state === 'outgoing' ? 'Cuộc gọi đi' : 'Cuộc gọi đến';
+    document.title = `${callTypeText} - ${callInfo.contact}`;
+    
+    console.log('📞 Final call info:', callInfo);
+    console.log('📞 Page title set to:', document.title);
     
     // Initialize audio system
     initializeAudioSystem();
+};
+
+// Create fallback call info
+const createFallbackCallInfo = () => {
+    return {
+        type: 'voice',
+        contact: 'Unknown User',
+        state: 'incoming',
+        timestamp: Date.now()
+    };
 };
 
 // Audio system for call notifications
@@ -169,8 +193,10 @@ const OutgoingCall = ({ setCallState }) => {
                 alt={callInfo?.contact} 
                 className="w-32 h-32 rounded-full border-4 border-purple-400 pulsing-avatar mb-6"
             />
-            <h1 className="text-4xl font-bold">{callInfo?.contact || 'Cosmic User'}</h1>
-            <p className="text-xl text-gray-400 mt-2">Đang gọi...</p>
+            <h1 className="text-4xl font-bold">{callInfo?.contact || 'Unknown User'}</h1>
+            <p className="text-xl text-gray-400 mt-2">
+                {callInfo?.type === 'video' ? 'Đang gọi video...' : 'Đang gọi...'}
+            </p>
             <div className="absolute bottom-16">
                 <button onClick={handleEndCall} className="call-button decline-button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -223,9 +249,12 @@ const IncomingCall = ({ setCallState }) => {
                 alt={callInfo?.contact} 
                 className="w-32 h-32 rounded-full border-4 border-purple-400 pulsing-avatar mb-6"
             />
-            <h1 className="text-4xl font-bold">{callInfo?.contact || 'Cosmic User'}</h1>
+            <h1 className="text-4xl font-bold">{callInfo?.contact || 'Unknown User'}</h1>
             <p className="text-xl text-gray-400 mt-2">
-                {callInfo?.type === 'video' ? 'Cuộc gọi video đến...' : 'Cuộc gọi thoại đến...'}
+                {callInfo?.state === 'outgoing' 
+                    ? (callInfo?.type === 'video' ? 'Đang gọi video...' : 'Đang gọi...') 
+                    : (callInfo?.type === 'video' ? 'Cuộc gọi video đến...' : 'Cuộc gọi thoại đến...')
+                }
             </p>
             <div className="absolute bottom-16 flex gap-8">
                 <button onClick={handleDeclineCall} className="call-button decline-button">
