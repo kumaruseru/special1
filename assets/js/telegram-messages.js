@@ -190,6 +190,17 @@ class TelegramMessaging {
             this.currentChat = { id: chatId };
             localStorage.setItem('currentChatId', chatId);
             
+            // Update chat header with saved user info
+            const savedChatUser = localStorage.getItem('currentChatUser');
+            if (savedChatUser) {
+                try {
+                    const chatUser = JSON.parse(savedChatUser);
+                    updateChatHeader(chatUser.name, chatUser.avatar);
+                } catch (e) {
+                    console.warn('Failed to parse saved chat user:', e);
+                }
+            }
+            
             // Join chat room
             if (this.socket?.connected) {
                 this.socket.emit('join_room', { roomId: chatId });
@@ -241,18 +252,23 @@ class TelegramMessaging {
         }
 
         console.log(`📬 Fetched ${data.messages.length} messages from server`);
+        console.log('🔍 Raw message data from server:', data.messages);
 
         // Convert to internal Telegram format
-        return data.messages.map(msg => ({
-            id: msg.id,
-            text: msg.text || msg.content || '',
-            senderId: msg.senderId,
-            senderName: msg.senderName || 'Unknown',
-            chatId: chatId,
-            timestamp: new Date(msg.timestamp),
-            type: msg.type || 'text',
-            status: 'sent'
-        }));
+        return data.messages.map(msg => {
+            console.log('📝 Processing message:', msg);
+            
+            return {
+                id: msg.id || msg._id,
+                text: msg.content || msg.text || '', // Use content field first
+                senderId: msg.senderId,
+                senderName: msg.senderName || 'Unknown',
+                chatId: chatId,
+                timestamp: new Date(msg.timestamp),
+                type: msg.type || 'text',
+                status: 'sent'
+            };
+        });
     }
 
     // === MESSAGE SENDING ===
@@ -857,6 +873,9 @@ window.selectConversation = function(conversationId, userName, userAvatar) {
             avatar: userAvatar
         }));
         
+        // Update chat header immediately
+        updateChatHeader(userName, userAvatar);
+        
         // Load the chat
         window.telegramMessaging.loadChat(conversationId);
         
@@ -867,6 +886,41 @@ window.selectConversation = function(conversationId, userName, userAvatar) {
         document.querySelector(`[data-conversation-id="${conversationId}"]`)?.classList.add('active');
     }
 };
+
+// Function to update chat header
+function updateChatHeader(userName, userAvatar) {
+    console.log('📋 Updating chat header:', userName);
+    
+    // Find the chat header elements
+    const chatTitle = document.querySelector('#chat-window h2, #chat-window h3, .chat-header h2, .chat-header h3');
+    const chatAvatar = document.querySelector('#chat-window img, .chat-header img');
+    const chatStatus = document.querySelector('#chat-window .text-green-400, .chat-header .text-green-400');
+    
+    console.log('🔍 Header elements found:', {
+        title: !!chatTitle,
+        avatar: !!chatAvatar,
+        status: !!chatStatus
+    });
+    
+    // Update title
+    if (chatTitle) {
+        chatTitle.textContent = userName;
+        console.log('✅ Updated chat title to:', userName);
+    }
+    
+    // Update avatar
+    if (chatAvatar) {
+        chatAvatar.src = userAvatar || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${userName.charAt(0).toUpperCase()}`;
+        chatAvatar.alt = userName;
+        console.log('✅ Updated chat avatar');
+    }
+    
+    // Update status
+    if (chatStatus) {
+        chatStatus.textContent = 'Hoạt động';
+        console.log('✅ Updated chat status');
+    }
+}
 
 // Load conversations function
 window.loadRealConversations = async function() {
