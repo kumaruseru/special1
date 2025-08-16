@@ -427,9 +427,10 @@ class TelegramMessaging {
             if (token) {
                 try {
                     const tokenData = JSON.parse(atob(token.split('.')[1]));
+                    console.log('🔍 Token data:', tokenData);
                     this.currentUser = {
                         id: tokenData.userId,
-                        name: tokenData.name || tokenData.username,
+                        name: tokenData.name || tokenData.username || tokenData.fullName || 'Unknown User',
                         email: tokenData.email
                     };
                     console.log('🔄 Retrieved user from token:', this.currentUser);

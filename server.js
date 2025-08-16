@@ -2179,6 +2179,11 @@ io.on('connection', (socket) => {
             console.log(`✅ User authenticated: ${user.name} (${user.email})`);
             
             socket.emit('authenticated', {
+                user: {
+                    id: socket.userId,
+                    name: socket.username,
+                    email: socket.email
+                },
                 userId: socket.userId,
                 username: socket.username,
                 email: socket.email
@@ -2341,10 +2346,12 @@ io.on('connection', (socket) => {
             }
             
             // Create Telegram-style message for real-time delivery
+            console.log(`🔍 Socket info - userId: ${socket.userId}, username: ${socket.username}, email: ${socket.email}`);
+            
             const telegramMessage = new TelegramMessage({
                 id: messageId,
                 senderId: socket.userId,
-                senderName: socket.username || 'Unknown User',
+                senderName: socket.username || socket.email || 'Unknown User',
                 senderAvatar: socket.avatar || `https://placehold.co/40x40/4F46E5/FFFFFF?text=${(socket.username || 'U').charAt(0).toUpperCase()}`,
                 text: text.trim(),
                 timestamp: timestamp,
