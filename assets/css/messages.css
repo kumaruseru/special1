@@ -32,13 +32,40 @@ body {
 .conversations-sidebar {
     display: flex !important;
     flex-direction: column !important;
-    width: 320px !important;
-    min-width: 320px !important;
-    max-width: 320px !important;
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
     height: 100vh !important;
     background: rgba(15, 23, 42, 0.8) !important;
     border-right: 1px solid rgba(107, 114, 128, 0.3) !important;
     overflow-y: auto !important;
+}
+
+/* Conversation items styling */
+.conversation-item {
+    padding: 0.625rem !important;
+    border-bottom: 1px solid rgba(75, 85, 99, 0.2) !important;
+}
+
+.conversation-item img {
+    width: 36px !important;
+    height: 36px !important;
+}
+
+.conversation-item h3 {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
+
+.conversation-item p {
+    font-size: 0.75rem !important;
+    margin: 0 !important;
+    margin-top: 0.125rem !important;
+}
+
+.conversation-item .timestamp {
+    font-size: 0.6875rem !important;
 }
 
 /* === CHAT AREA === */
@@ -94,14 +121,14 @@ body {
 
 .chat-header h2 {
     margin: 0 !important;
-    font-size: 1.125rem !important;
+    font-size: 1rem !important;
     font-weight: 600 !important;
     color: white !important;
 }
 
 .chat-header img {
-    width: 40px !important;
-    height: 40px !important;
+    width: 32px !important;
+    height: 32px !important;
     border-radius: 50% !important;
 }
 
@@ -109,8 +136,8 @@ body {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 40px !important;
-    height: 40px !important;
+    width: 32px !important;
+    height: 32px !important;
     border-radius: 50% !important;
     background: rgba(55, 65, 81, 0.5) !important;
     border: 1px solid rgba(75, 85, 99, 0.3) !important;
