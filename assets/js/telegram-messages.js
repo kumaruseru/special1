@@ -371,7 +371,7 @@ class TelegramMessaging {
         });
 
         const messageEl = document.createElement('div');
-        messageEl.className = `message-item ${isOwn ? 'own' : 'other'} mb-4`;
+        messageEl.className = `message-item ${isOwn ? 'own' : 'other'}`;
         messageEl.setAttribute('data-message-id', message.id);
 
         // Check if message is long (hash-like or very long text)
@@ -385,18 +385,16 @@ class TelegramMessaging {
             'message-text break-words';
 
         messageEl.innerHTML = `
-            <div class="flex ${isOwn ? 'justify-end' : 'justify-start'}">
-                <div class="${maxWidthClass} px-4 py-2 rounded-lg ${
-                    isOwn 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-700 text-gray-100'
-                } ${isLongMessage ? 'message-long' : ''}">
-                    ${!isOwn ? `<div class="text-xs text-gray-400 mb-1">${message.senderName}</div>` : ''}
-                    <div class="${messageTextClass}">${this.escapeHtml(message.text)}</div>
-                    <div class="text-xs ${isOwn ? 'text-blue-200' : 'text-gray-500'} mt-1 flex items-center">
-                        <span>${timeStr}</span>
-                        ${isOwn ? this.getStatusIcon(message.status) : ''}
-                    </div>
+            <div class="${maxWidthClass} px-4 py-2 rounded-lg ${
+                isOwn 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-700 text-gray-100'
+            } ${isLongMessage ? 'message-long' : ''}">
+                ${!isOwn ? `<div class="text-xs text-gray-400 mb-1">${message.senderName}</div>` : ''}
+                <div class="${messageTextClass}">${this.escapeHtml(message.text)}</div>
+                <div class="text-xs ${isOwn ? 'text-blue-200' : 'text-gray-500'} mt-1 flex items-center ${isOwn ? 'justify-end' : 'justify-start'}">
+                    <span>${timeStr}</span>
+                    ${isOwn ? `<span class="ml-1">${this.getStatusIcon(message.status)}</span>` : ''}
                 </div>
             </div>
         `;

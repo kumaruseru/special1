@@ -184,12 +184,40 @@ main .glass-pane {
     padding: 1rem;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .message-item {
-    margin-bottom: 1rem;
+    margin-bottom: 0;
     word-break: break-word;
     overflow-wrap: break-word;
+    width: 100%;
+    display: flex;
+}
+
+/* Message alignment */
+.message-item.own {
+    justify-content: flex-end;
+}
+
+.message-item.other {
+    justify-content: flex-start;
+}
+
+/* Message bubble styling */
+.message-item.own .bg-blue-600 {
+    border-radius: 1rem 1rem 0.25rem 1rem;
+}
+
+.message-item.other .bg-gray-700 {
+    border-radius: 1rem 1rem 1rem 0.25rem;
+}
+
+/* Ensure proper spacing */
+.message-item + .message-item {
+    margin-top: 0.5rem;
 }
 
 .message-item .max-w-xs {
@@ -200,6 +228,12 @@ main .glass-pane {
 
 .message-item .max-w-md {
     max-width: 28rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.message-item .max-w-lg {
+    max-width: 32rem;
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
@@ -234,6 +268,31 @@ main .glass-pane {
     flex-shrink: 0;
     padding: 1rem;
     border-top: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+/* Chat Input Area Improvements */
+.chat-input .flex {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.chat-input input {
+    min-width: 0;
+    flex: 1;
+}
+
+/* Fix input area layout */
+#chat-window .p-4.border-t {
+    flex-shrink: 0;
+    padding: 1rem;
+    background: rgba(17, 24, 39, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+#chat-window .bg-gray-800\/50 {
+    background: rgba(31, 41, 55, 0.7) !important;
+    border: 1px solid rgba(75, 85, 99, 0.6);
+    backdrop-filter: blur(8px);
 }
 
 /* Long message handling */
