@@ -2252,6 +2252,38 @@ io.on('connection', (socket) => {
             socket.emit('join_error', { error: error.message });
         }
     });
+
+    // Join specific chat room for private messaging
+    socket.on('join_room', (data) => {
+        try {
+            console.log('🏠 join_room event received:', data);
+            
+            if (!data || !data.roomId) {
+                console.error('❌ Invalid join_room data:', data);
+                socket.emit('join_room_error', { error: 'Room ID is required' });
+                return;
+            }
+
+            const { roomId } = data;
+            const chatRoom = `chat_${roomId}`;
+            
+            // Join the specific chat room
+            socket.join(chatRoom);
+            
+            console.log(`🏠 Socket ${socket.id} joined room: ${chatRoom}`);
+            
+            // Confirm room join
+            socket.emit('room_joined', { 
+                roomId: roomId,
+                chatRoom: chatRoom,
+                message: `Joined chat room ${roomId}` 
+            });
+            
+        } catch (error) {
+            console.error('Error in join_room:', error);
+            socket.emit('join_room_error', { error: error.message });
+        }
+    });
     
     // Telegram-style message sending with delivery guarantees
     socket.on('send_message', async (data, callback) => {
@@ -2319,32 +2351,37 @@ io.on('connection', (socket) => {
                 chatId: chatId || 'global'
             });
             
-            console.log(`✅ Broadcasting Telegram-style message from ${socket.username} to ${telegramMessage.chatId}`);
+            console.log(`✅ Sending Telegram-style message from ${socket.username} to user ${chatId}`);
             
-            // Get all users in chat
-            const chatRoom = telegramMessage.chatId === 'global' ? 'global_chat' : `chat_${telegramMessage.chatId}`;
-            const roomSockets = io.sockets.adapter.rooms.get(chatRoom);
+            // Find the target user's socket(s) directly
+            let messageDelivered = false;
+            const receiverId = chatId; // chatId is actually the receiver's user ID
             
-            if (roomSockets) {
-                // Send to each user with delivery tracking
-                roomSockets.forEach(socketId => {
-                    if (socketId !== socket.id) { // Don't send to sender
-                        const targetSocket = io.sockets.sockets.get(socketId);
-                        if (targetSocket && targetSocket.userId) {
-                            // Send message and wait for acknowledgment
-                            targetSocket.emit('new_message', telegramMessage, (ack) => {
-                                if (ack && ack.received) {
-                                    telegramMessage.markAsDelivered(targetSocket.userId);
-                                    console.log(`📨 Message ${telegramMessage.id} delivered to ${targetSocket.userId}`);
-                                } else {
-                                    // Add to queue for retry
-                                    addToMessageQueue(targetSocket.userId, telegramMessage);
-                                }
-                            });
+            // Iterate through all connected sockets to find the receiver
+            io.sockets.sockets.forEach((targetSocket) => {
+                if (targetSocket.userId === receiverId && targetSocket.id !== socket.id) {
+                    console.log(`📨 Delivering message to user ${receiverId} via socket ${targetSocket.id}`);
+                    
+                    // Send message directly to the receiver
+                    targetSocket.emit('new_message', telegramMessage, (ack) => {
+                        if (ack && ack.received) {
+                            telegramMessage.markAsDelivered(receiverId);
+                            console.log(`✅ Message ${telegramMessage.id} delivered to ${receiverId}`);
                         }
-                    }
-                });
+                    });
+                    
+                    messageDelivered = true;
+                }
+            });
+            
+            // If receiver is not online, log it
+            if (!messageDelivered) {
+                console.log(`⚠️ User ${receiverId} is not online, message saved to database only`);
             }
+            
+            // Also try sending to room as fallback (for group chats in future)
+            const chatRoom = `chat_${receiverId}`;
+            socket.to(chatRoom).emit('new_message', telegramMessage);
             
             // Immediate confirmation to sender (Telegram-style)
             const confirmation = {

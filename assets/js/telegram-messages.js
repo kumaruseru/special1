@@ -140,13 +140,19 @@ class TelegramMessaging {
         this.socket.on('authentication_failed', (data) => this.handleAuthenticationFailed(data));
 
         // Telegram-style message events
-        this.socket.on('new_message', (message) => this.handleIncomingMessage(message));
+        this.socket.on('new_message', (message, ack) => {
+            this.handleIncomingMessage(message);
+            // Send acknowledgment that message was received
+            if (ack) ack({ received: true, timestamp: Date.now() });
+        });
         this.socket.on('message', (message) => this.handleIncomingMessage(message));
         this.socket.on('broadcast_message', (message) => this.handleIncomingMessage(message));
         this.socket.on('message_sent', (data) => this.handleMessageSent(data));
         this.socket.on('message_delivered', (data) => this.handleMessageDelivered(data));
         this.socket.on('typing_start', (data) => this.handleTypingStart(data));
         this.socket.on('typing_stop', (data) => this.handleTypingStop(data));
+        this.socket.on('room_joined', (data) => this.handleRoomJoined(data));
+        this.socket.on('join_room_error', (data) => this.handleJoinRoomError(data));
     }
 
     handleAuthenticated(data) {
@@ -209,6 +215,14 @@ class TelegramMessaging {
     handleMessageDelivered(data) {
         console.log('📨 Message delivered:', data);
         this.updateMessageStatus(data.messageId, 'delivered');
+    }
+
+    handleRoomJoined(data) {
+        console.log('🏠 Room joined successfully:', data);
+    }
+
+    handleJoinRoomError(data) {
+        console.error('❌ Failed to join room:', data);
     }
 
     handleTypingStart(data) {
