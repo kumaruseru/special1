@@ -1481,10 +1481,17 @@ class TelegramCallSystem {
             const messaging = window.telegramMessaging;
             if (messaging && messaging.socket) {
                 messaging.socket.on('incoming_call', (data) => {
+                    console.log('📞 Client: Received incoming_call signal:', data);
+                    console.log('📞 Client: Current user ID:', messaging.currentUser?.id);
+                    console.log('📞 Client: Caller ID:', data.callerId);
+                    
                     // Only show notification if this user is the target (receiver)
                     const currentUserId = messaging.currentUser?.id;
                     if (currentUserId && data.callerId !== currentUserId) {
+                        console.log('📞 Client: Showing incoming call notification');
                         this.showIncomingCallNotification(data);
+                    } else {
+                        console.log('📞 Client: Not showing notification - either no current user or caller is same as current user');
                     }
                 });
                 
@@ -1551,12 +1558,23 @@ class TelegramCallSystem {
 
         // Send call initiation through socket
         if (window.telegramMessaging?.socket?.connected) {
+            console.log('📞 Client: Sending initiate_call with data:', {
+                targetUserId: currentChat.id,
+                callType: type,
+                callerName: window.telegramMessaging.currentUser?.name || 'Unknown',
+                callerAvatar: window.telegramMessaging.currentUser?.avatar || ''
+            });
+            console.log('📞 Client: Current user info:', window.telegramMessaging.currentUser);
+            console.log('📞 Client: Current chat info:', currentChat);
+            
             window.telegramMessaging.socket.emit('initiate_call', {
                 targetUserId: currentChat.id,
                 callType: type,
                 callerName: window.telegramMessaging.currentUser?.name || 'Unknown',
                 callerAvatar: window.telegramMessaging.currentUser?.avatar || ''
             });
+        } else {
+            console.error('❌ Socket not connected for call initiation');
         }
 
         // Open call window

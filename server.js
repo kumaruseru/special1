@@ -2489,6 +2489,14 @@ io.on('connection', (socket) => {
             isAuthenticated: socket.isAuthenticated
         });
         
+        console.log('👥 Active users count:', activeUsers.size);
+        console.log('👥 Active users list:', Array.from(activeUsers.entries()).map(([id, user]) => ({
+            id,
+            socketId: user.socketId,
+            username: user.username,
+            isAuthenticated: user.isAuthenticated
+        })));
+        
         if (!callerId || !targetUserId) {
             console.error('❌ Missing user data:', { callerId, targetUserId });
             socket.emit('call_error', { error: 'Invalid user data - missing user IDs' });
@@ -2501,8 +2509,19 @@ io.on('connection', (socket) => {
         }
 
         const targetUserData = activeUsers.get(targetUserId);
+        console.log('🎯 Target user lookup result:', {
+            targetUserId,
+            found: !!targetUserData,
+            targetUserData: targetUserData ? {
+                socketId: targetUserData.socketId,
+                username: targetUserData.username,
+                isAuthenticated: targetUserData.isAuthenticated
+            } : null
+        });
+        
         if (!targetUserData) {
-            console.error('❌ Target user not found:', targetUserId);
+            console.error('❌ Target user not found in activeUsers:', targetUserId);
+            console.log('📋 Available user IDs:', Array.from(activeUsers.keys()));
             socket.emit('call_error', { error: 'User is offline or not found' });
             return;
         }
@@ -2523,12 +2542,16 @@ io.on('connection', (socket) => {
         console.log('✅ Call session created:', callId);
 
         // Notify target user
-        io.to(targetUserData.socketId).emit('incoming_call', {
+        console.log(`📤 Sending incoming_call to socketId: ${targetUserData.socketId}`);
+        const callNotification = {
             callId,
             callerId,
             callerUsername,
             callType
-        });
+        };
+        console.log('📤 Call notification data:', callNotification);
+        
+        io.to(targetUserData.socketId).emit('incoming_call', callNotification);
 
         // Confirm to caller
         socket.emit('call_initiated', { callId, callData });
