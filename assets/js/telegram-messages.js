@@ -1456,7 +1456,44 @@ class TelegramCallSystem {
     constructor() {
         this.currentCall = null;
         this.socket = null;
+        this.ringtone = null;
         this.initializeCallButtons();
+        this.initializeCallNotifications();
+        this.initializeRingtone();
+    }
+
+    initializeRingtone() {
+        // Create ringtone audio
+        this.ringtone = new Audio();
+        this.ringtone.loop = true;
+        this.ringtone.volume = 0.7;
+        
+        // Use a simple beep pattern for ringtone
+        this.ringtone.src = 'data:audio/wav;base64,UklGRsABAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
+    }
+
+    initializeCallNotifications() {
+        // Listen for incoming calls from socket
+        document.addEventListener('DOMContentLoaded', () => {
+            const messaging = window.telegramMessaging;
+            if (messaging && messaging.socket) {
+                messaging.socket.on('incoming_call', (data) => {
+                    this.showIncomingCallNotification(data);
+                });
+                
+                messaging.socket.on('call_accepted', (data) => {
+                    this.handleCallAccepted(data);
+                });
+                
+                messaging.socket.on('call_rejected', (data) => {
+                    this.handleCallRejected(data);
+                });
+                
+                messaging.socket.on('call_ended', (data) => {
+                    this.handleCallEnded(data);
+                });
+            }
+        });
     }
 
     initializeCallButtons() {
@@ -1514,18 +1551,11 @@ class TelegramCallSystem {
         this.openCallWindow();
     }
 
-    openCallWindow() {
-        // Calculate optimal window size and position
-        const width = 800;
-        const height = 600;
-        const left = Math.round((screen.width - width) / 2);
-        const top = Math.round((screen.height - height) / 2);
-
-        // Open call window
+        // Open call window in new tab instead of popup
         const callWindow = window.open(
             'calls.html',
-            'cosmicCall',
-            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+            '_blank',
+            'width=800,height=600'
         );
 
         if (!callWindow) {
@@ -1536,11 +1566,181 @@ class TelegramCallSystem {
         // Store reference
         this.currentCall = callWindow;
 
-        // Focus the call window
-        callWindow.focus();
-
-        console.log('📞 Call window opened successfully');
+        console.log('📞 Call window opened in new tab');
     }
+
+    showIncomingCallNotification(callData) {
+        const { callId, callerId, callerUsername, callType } = callData;
+        
+        console.log('📞 Incoming call from:', callerUsername);
+        
+        // Play ringtone
+        if (this.ringtone) {
+            this.ringtone.play().catch(e => console.log('Could not play ringtone:', e));
+        }
+        
+        // Create notification overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'incoming-call-overlay';
+        overlay.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]';
+        overlay.innerHTML = `
+            <div class="glass-pane p-8 rounded-3xl max-w-md w-full mx-4 text-center animate-pulse">
+                <div class="mb-6">
+                    <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            ${callType === 'video' ? 
+                                '<polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>' : 
+                                '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>'
+                            }
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">${callType === 'video' ? 'Video Call' : 'Voice Call'}</h3>
+                    <p class="text-lg text-gray-300">${callerUsername}</p>
+                    <p class="text-sm text-gray-400 mt-2">Cuộc gọi đến...</p>
+                </div>
+                
+                <div class="flex gap-4 justify-center">
+                    <button onclick="telegramCallSystem.rejectCall('${callId}')" class="p-4 bg-red-500 hover:bg-red-600 rounded-full transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                    </button>
+                    <button onclick="telegramCallSystem.acceptCall('${callId}', '${callType}', '${callerUsername}')" class="p-4 bg-green-500 hover:bg-green-600 rounded-full transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="mt-6">
+                    <div class="flex justify-center items-center gap-2 text-gray-400">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        // Auto reject after 30 seconds
+        setTimeout(() => {
+            if (document.getElementById('incoming-call-overlay')) {
+                this.rejectCall(callId);
+            }
+        }, 30000);
+    }
+
+    acceptCall(callId, callType, callerUsername) {
+        console.log('✅ Accepting call:', callId);
+        
+        // Stop ringtone
+        if (this.ringtone) {
+            this.ringtone.pause();
+            this.ringtone.currentTime = 0;
+        }
+        
+        // Remove notification overlay
+        const overlay = document.getElementById('incoming-call-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+        
+        // Send accept to server
+        if (window.telegramMessaging?.socket) {
+            window.telegramMessaging.socket.emit('answer_call', {
+                callId: callId,
+                answer: 'accept'
+            });
+        }
+        
+        // Prepare call info for incoming call
+        const callInfo = {
+            type: callType,
+            contact: callerUsername,
+            contactId: callId,
+            state: 'incoming',
+            timestamp: Date.now()
+        };
+        
+        // Store call info
+        localStorage.setItem('currentCall', JSON.stringify(callInfo));
+        
+        // Open call window in new tab
+        const callWindow = window.open('calls.html', '_blank');
+        if (callWindow) {
+            this.currentCall = callWindow;
+            console.log('📞 Call accepted - opened in new tab');
+        }
+    }
+
+    rejectCall(callId) {
+        console.log('❌ Rejecting call:', callId);
+        
+        // Stop ringtone
+        if (this.ringtone) {
+            this.ringtone.pause();
+            this.ringtone.currentTime = 0;
+        }
+        
+        // Remove notification overlay
+        const overlay = document.getElementById('incoming-call-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+        
+        // Send reject to server
+        if (window.telegramMessaging?.socket) {
+            window.telegramMessaging.socket.emit('answer_call', {
+                callId: callId,
+                answer: 'reject'
+            });
+        }
+    }
+
+    handleCallAccepted(data) {
+        console.log('✅ Call accepted by remote user');
+        this.showCallNotification('Cuộc gọi đã được chấp nhận', 'success');
+    }
+
+    handleCallRejected(data) {
+        console.log('❌ Call rejected by remote user');
+        this.showCallNotification('Cuộc gọi bị từ chối', 'error');
+    }
+
+    handleCallEnded(data) {
+        console.log('📞 Call ended');
+        this.showCallNotification('Cuộc gọi đã kết thúc', 'info');
+    }
+
+    showCallNotification(message, type = 'info') {
+        const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            info: 'bg-blue-500'
+        };
+        
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-bounce`;
+        notification.innerHTML = `
+            <div class="flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    openCallWindow() {
 
     showError(message) {
         // Show error notification
