@@ -1754,6 +1754,23 @@ class TelegramCallSystem {
     }
 
     openCallWindow() {
+        // Open call window in new tab instead of popup
+        var callWindow = window.open(
+            'calls.html',
+            '_blank',
+            'width=800,height=600'
+        );
+
+        if (!callWindow) {
+            this.showError('Không thể mở cửa sổ cuộc gọi. Vui lòng cho phép popup trong trình duyệt.');
+            return;
+        }
+
+        // Store reference
+        this.currentCall = callWindow;
+
+        console.log('📞 Call window opened in new tab');
+    }
 
     showError(message) {
         // Show error notification
