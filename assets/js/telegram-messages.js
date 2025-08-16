@@ -17,6 +17,7 @@ class TelegramMessaging {
         this.initSocket();
         this.initUI();
         this.initMessageHandlers();
+        this.requestNotificationPermission();
         this.restoreSession();
         
         console.log('✅ Telegram messaging system ready');
@@ -67,6 +68,7 @@ class TelegramMessaging {
             this.socket.on('connect', () => {
                 console.log('🔌 Connected to Telegram-style server');
                 this.isOnline = true;
+                this.updateConnectionStatus();
                 this.authenticateUser();
                 this.joinUserRoom();
             });
@@ -74,10 +76,13 @@ class TelegramMessaging {
             this.socket.on('disconnect', () => {
                 console.log('💔 Disconnected from server');
                 this.isOnline = false;
+                this.updateConnectionStatus();
             });
 
             this.socket.on('reconnect', () => {
                 console.log('🔄 Reconnected to server');
+                this.isOnline = true;
+                this.updateConnectionStatus();
                 this.restoreSession();
             });
 
@@ -192,13 +197,18 @@ class TelegramMessaging {
             
             // Load messages from API
             const messages = await this.fetchMessagesFromAPI(chatId);
+            console.log('📥 Fetched messages:', messages.length, messages);
             
             // Clear and render messages
             this.clearMessageContainer();
+            console.log('🧹 Cleared message container');
+            
             messages.forEach(msg => {
                 this.messages.set(msg.id, msg);
                 this.renderMessage(msg);
             });
+            
+            console.log('🎨 Rendered all messages to DOM');
             
             this.scrollToBottom();
             this.updateUI();
@@ -324,8 +334,11 @@ class TelegramMessaging {
 
     // === UI RENDERING ===
     renderMessage(message) {
-        const container = document.querySelector('.messages-container');
-        if (!container) return;
+        const container = document.querySelector('#messages-container');
+        if (!container) {
+            console.error('❌ Messages container not found! Looking for #messages-container');
+            return;
+        }
 
         const isOwn = message.senderId === this.currentUser?.id;
         const timeStr = message.timestamp.toLocaleTimeString('vi-VN', {
@@ -337,7 +350,8 @@ class TelegramMessaging {
             text: message.text,
             isOwn,
             senderId: message.senderId,
-            currentUserId: this.currentUser?.id
+            currentUserId: this.currentUser?.id,
+            container: !!container
         });
 
         const messageEl = document.createElement('div');
@@ -362,6 +376,7 @@ class TelegramMessaging {
         `;
 
         container.appendChild(messageEl);
+        console.log('✅ Message element added to container:', messageEl);
     }
 
     getStatusIcon(status) {
@@ -387,16 +402,35 @@ class TelegramMessaging {
     }
 
     clearMessageContainer() {
-        const container = document.querySelector('.messages-container');
+        const container = document.querySelector('#messages-container');
         if (container) {
             container.innerHTML = '';
         }
     }
 
     scrollToBottom() {
-        const container = document.querySelector('.messages-container');
+        const container = document.querySelector('#messages-container');
         if (container) {
             container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    updateConnectionStatus() {
+        const statusIndicator = document.getElementById('connection-status');
+        if (statusIndicator) {
+            if (this.isOnline) {
+                statusIndicator.className = 'flex items-center space-x-2 text-green-400 text-sm';
+                statusIndicator.innerHTML = `
+                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span>Đã kết nối</span>
+                `;
+            } else {
+                statusIndicator.className = 'flex items-center space-x-2 text-red-400 text-sm';
+                statusIndicator.innerHTML = `
+                    <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                    <span>Mất kết nối</span>
+                `;
+            }
         }
     }
 
@@ -405,29 +439,127 @@ class TelegramMessaging {
         const chatWindow = document.getElementById('chat-window');
         const emptyPlaceholder = document.getElementById('empty-chat-placeholder');
         
+        console.log('🔄 Updating UI state:', {
+            hasCurrentChat: !!this.currentChat,
+            chatWindow: !!chatWindow,
+            emptyPlaceholder: !!emptyPlaceholder
+        });
+        
         if (this.currentChat) {
-            chatWindow?.classList.remove('hidden');
-            chatWindow?.style.setProperty('display', 'flex');
-            emptyPlaceholder?.classList.add('hidden');
-            emptyPlaceholder?.style.setProperty('display', 'none');
+            if (chatWindow) {
+                chatWindow.classList.remove('hidden');
+                chatWindow.style.setProperty('display', 'flex');
+                console.log('✅ Chat window shown');
+            }
+            if (emptyPlaceholder) {
+                emptyPlaceholder.classList.add('hidden');
+                emptyPlaceholder.style.setProperty('display', 'none');
+                console.log('✅ Empty placeholder hidden');
+            }
         } else {
-            chatWindow?.classList.add('hidden');
-            chatWindow?.style.setProperty('display', 'none');
-            emptyPlaceholder?.classList.remove('hidden');
-            emptyPlaceholder?.style.setProperty('display', 'flex');
+            if (chatWindow) {
+                chatWindow.classList.add('hidden');
+                chatWindow.style.setProperty('display', 'none');
+                console.log('❌ Chat window hidden');
+            }
+            if (emptyPlaceholder) {
+                emptyPlaceholder.classList.remove('hidden');
+                emptyPlaceholder.style.setProperty('display', 'flex');
+                console.log('❌ Empty placeholder shown');
+            }
         }
     }
 
     updateChatLastMessage(message) {
         // Update conversation list last message
-        // TODO: Implement conversation list update
+        try {
+            const conversationItem = document.querySelector(`[data-conversation-id="${message.chatId}"]`);
+            if (conversationItem) {
+                // Update last message text
+                const lastMessageEl = conversationItem.querySelector('.last-message');
+                if (lastMessageEl) {
+                    const truncatedText = message.text.length > 30 
+                        ? message.text.substring(0, 30) + '...' 
+                        : message.text;
+                    lastMessageEl.textContent = truncatedText;
+                }
+                
+                // Update timestamp
+                const timestampEl = conversationItem.querySelector('.timestamp');
+                if (timestampEl) {
+                    timestampEl.textContent = message.timestamp.toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+                
+                // Move to top of conversation list
+                const conversationsList = conversationItem.parentElement;
+                if (conversationsList) {
+                    conversationsList.insertBefore(conversationItem, conversationsList.firstChild);
+                }
+                
+                console.log('📋 Updated conversation list for:', message.chatId);
+            }
+        } catch (error) {
+            console.error('❌ Failed to update conversation list:', error);
+        }
     }
 
     updateTypingIndicator() {
-        // TODO: Implement typing indicator
+        // Implement typing indicator like Telegram
+        const typingContainer = document.getElementById('typing-indicator');
+        
+        if (this.typingUsers.size === 0) {
+            // Hide typing indicator
+            if (typingContainer) {
+                typingContainer.classList.add('hidden');
+                typingContainer.innerHTML = '';
+            }
+            return;
+        }
+        
+        // Show typing indicator
+        if (typingContainer) {
+            typingContainer.classList.remove('hidden');
+            
+            const typingArray = Array.from(this.typingUsers);
+            let typingText = '';
+            
+            if (typingArray.length === 1) {
+                typingText = `${typingArray[0]} đang nhập...`;
+            } else if (typingArray.length === 2) {
+                typingText = `${typingArray[0]} và ${typingArray[1]} đang nhập...`;
+            } else {
+                typingText = `${typingArray[0]} và ${typingArray.length - 1} người khác đang nhập...`;
+            }
+            
+            typingContainer.innerHTML = `
+                <div class="flex items-center space-x-2 px-4 py-2 text-sm text-gray-400">
+                    <div class="flex space-x-1">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
+                    </div>
+                    <span>${typingText}</span>
+                </div>
+            `;
+            
+            console.log('⌨️ Updated typing indicator:', typingText);
+        } else {
+            console.warn('⚠️ Typing indicator container not found');
+        }
     }
 
     // === SESSION MANAGEMENT ===
+    requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                console.log('🔔 Notification permission:', permission);
+            });
+        }
+    }
+
     restoreSession() {
         const savedChatId = localStorage.getItem('currentChatId');
         if (savedChatId) {
@@ -451,12 +583,185 @@ class TelegramMessaging {
 
     showNotification(message) {
         console.log('🔔 Telegram notification:', message.text);
-        // TODO: Implement push notifications
+        
+        // Check if notifications are supported and permitted
+        if (!('Notification' in window)) {
+            console.warn('⚠️ Browser does not support notifications');
+            return;
+        }
+        
+        // Request permission if needed
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    this.displayNotification(message);
+                }
+            });
+        } else if (Notification.permission === 'granted') {
+            this.displayNotification(message);
+        }
+        
+        // Also show in-page notification
+        this.showInPageNotification(message);
+    }
+    
+    displayNotification(message) {
+        try {
+            const notification = new Notification(`Tin nhắn từ ${message.senderName}`, {
+                body: message.text.length > 100 ? message.text.substring(0, 100) + '...' : message.text,
+                icon: '/assets/images/logo.png',
+                badge: '/assets/images/badge.png',
+                tag: `message-${message.chatId}`,
+                requireInteraction: false,
+                silent: false
+            });
+            
+            notification.onclick = () => {
+                window.focus();
+                this.loadChat(message.chatId);
+                notification.close();
+            };
+            
+            // Auto close after 5 seconds
+            setTimeout(() => {
+                notification.close();
+            }, 5000);
+            
+            console.log('🔔 Push notification sent');
+        } catch (error) {
+            console.error('❌ Failed to show push notification:', error);
+        }
+    }
+    
+    showInPageNotification(message) {
+        // Create in-page notification toast
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg z-50 max-w-sm';
+        toast.innerHTML = `
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                        ${message.senderName.charAt(0).toUpperCase()}
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm">${message.senderName}</p>
+                    <p class="text-sm text-gray-300 truncate">${message.text}</p>
+                </div>
+                <button class="text-gray-400 hover:text-white" onclick="this.parentElement.parentElement.remove()">
+                    ✕
+                </button>
+            </div>
+        `;
+        
+        // Add click handler to open chat
+        toast.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'BUTTON') {
+                this.loadChat(message.chatId);
+                toast.remove();
+            }
+        });
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 4000);
     }
 
     showError(error) {
         console.error('❌ Telegram error:', error);
-        // TODO: Show user-friendly error UI
+        
+        // Create user-friendly error toast
+        const errorToast = document.createElement('div');
+        errorToast.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
+        
+        // Determine user-friendly message
+        let userMessage = 'Đã xảy ra lỗi không xác định';
+        
+        if (typeof error === 'string') {
+            if (error.includes('Không thể tải')) {
+                userMessage = 'Không thể tải tin nhắn. Vui lòng thử lại.';
+            } else if (error.includes('Failed to load')) {
+                userMessage = 'Mất kết nối với máy chủ. Vui lòng kiểm tra internet.';
+            } else if (error.includes('Send failed')) {
+                userMessage = 'Không thể gửi tin nhắn. Vui lòng thử lại.';
+            } else if (error.includes('HTTP 401')) {
+                userMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+            } else if (error.includes('HTTP 403')) {
+                userMessage = 'Bạn không có quyền thực hiện thao tác này.';
+            } else if (error.includes('HTTP 500')) {
+                userMessage = 'Lỗi máy chủ. Vui lòng thử lại sau.';
+            } else {
+                userMessage = error;
+            }
+        } else if (error?.message) {
+            userMessage = error.message;
+        }
+        
+        errorToast.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="font-medium text-sm">Lỗi</p>
+                    <p class="text-sm text-red-100">${userMessage}</p>
+                </div>
+                <button class="text-red-200 hover:text-white ml-2" onclick="this.parentElement.parentElement.remove()">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(errorToast);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (errorToast.parentElement) {
+                errorToast.remove();
+            }
+        }, 5000);
+        
+        // Add slide-in animation
+        errorToast.style.transform = 'translate(-50%, -20px)';
+        errorToast.style.opacity = '0';
+        requestAnimationFrame(() => {
+            errorToast.style.transition = 'all 0.3s ease-out';
+            errorToast.style.transform = 'translate(-50%, 0)';
+            errorToast.style.opacity = '1';
+        });
+        
+        // Provide action buttons for specific errors
+        if (userMessage.includes('đăng nhập lại')) {
+            this.addErrorAction(errorToast, 'Đăng nhập', () => {
+                window.location.href = '/pages/login.html';
+            });
+        } else if (userMessage.includes('thử lại')) {
+            this.addErrorAction(errorToast, 'Thử lại', () => {
+                if (this.currentChat) {
+                    this.loadChat(this.currentChat.id);
+                }
+                errorToast.remove();
+            });
+        }
+    }
+    
+    addErrorAction(errorToast, buttonText, action) {
+        const actionButton = document.createElement('button');
+        actionButton.className = 'ml-3 bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded text-sm font-medium transition-all';
+        actionButton.textContent = buttonText;
+        actionButton.onclick = action;
+        
+        const buttonContainer = errorToast.querySelector('.flex-1');
+        buttonContainer.appendChild(actionButton);
     }
 
     // === UI INITIALIZATION ===
@@ -468,10 +773,45 @@ class TelegramMessaging {
     initMessageInput() {
         this.messageInput = document.getElementById('message-input');
         if (this.messageInput) {
+            // Handle Enter key
             this.messageInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     this.handleSendMessage();
+                }
+            });
+            
+            // Handle typing indicator
+            let typingTimer;
+            this.messageInput.addEventListener('input', () => {
+                if (this.currentChat && this.socket?.connected) {
+                    // Send typing start
+                    this.socket.emit('typing_start', {
+                        chatId: this.currentChat.id,
+                        username: this.currentUser?.name || 'Unknown'
+                    });
+                    
+                    // Clear existing timer
+                    clearTimeout(typingTimer);
+                    
+                    // Set timer to stop typing after 2 seconds of inactivity
+                    typingTimer = setTimeout(() => {
+                        this.socket.emit('typing_stop', {
+                            chatId: this.currentChat.id,
+                            username: this.currentUser?.name || 'Unknown'
+                        });
+                    }, 2000);
+                }
+            });
+            
+            // Handle blur (stop typing when input loses focus)
+            this.messageInput.addEventListener('blur', () => {
+                clearTimeout(typingTimer);
+                if (this.currentChat && this.socket?.connected) {
+                    this.socket.emit('typing_stop', {
+                        chatId: this.currentChat.id,
+                        username: this.currentUser?.name || 'Unknown'
+                    });
                 }
             });
         }
