@@ -12,6 +12,7 @@ class TelegramMessaging {
         this.messageQueue = []; // Pending messages
         this.typingUsers = new Set();
         this.isOnline = false;
+        this.isAuthenticated = false; // Socket.IO authentication status
         
         // Initialize subsystems
         this.initSocket();
@@ -110,12 +111,15 @@ class TelegramMessaging {
 
     authenticateUser() {
         if (this.currentUser && this.socket?.connected) {
-            this.socket.emit('authenticate', {
-                userId: this.currentUser.id,
-                username: this.currentUser.name,
-                avatar: this.currentUser.avatar
-            });
-            console.log('🔐 User authenticated');
+            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+            if (token) {
+                this.socket.emit('authenticate', {
+                    token: token
+                });
+                console.log('🔐 User authentication sent with JWT token');
+            } else {
+                console.error('❌ No JWT token found for authentication');
+            }
         }
     }
 
@@ -131,6 +135,10 @@ class TelegramMessaging {
     initMessageHandlers() {
         if (!this.socket) return;
 
+        // Authentication events
+        this.socket.on('authenticated', (data) => this.handleAuthenticated(data));
+        this.socket.on('authentication_failed', (data) => this.handleAuthenticationFailed(data));
+
         // Telegram-style message events
         this.socket.on('new_message', (message) => this.handleIncomingMessage(message));
         this.socket.on('message', (message) => this.handleIncomingMessage(message));
@@ -139,6 +147,21 @@ class TelegramMessaging {
         this.socket.on('message_delivered', (data) => this.handleMessageDelivered(data));
         this.socket.on('typing_start', (data) => this.handleTypingStart(data));
         this.socket.on('typing_stop', (data) => this.handleTypingStop(data));
+    }
+
+    handleAuthenticated(data) {
+        console.log('✅ Socket.IO authentication successful:', data);
+        this.isAuthenticated = true;
+        // Join current chat room if we have one
+        if (this.currentChat) {
+            this.socket.emit('join_room', { roomId: this.currentChat.id });
+        }
+    }
+
+    handleAuthenticationFailed(data) {
+        console.error('❌ Socket.IO authentication failed:', data);
+        this.isAuthenticated = false;
+        // Try to refresh the token or redirect to login
     }
 
     handleIncomingMessage(message) {
@@ -336,8 +359,8 @@ class TelegramMessaging {
         this.scrollToBottom();
 
         try {
-            // Send via Socket.IO
-            if (this.socket?.connected) {
+            // Send via Socket.IO if connected and authenticated
+            if (this.socket?.connected && this.isAuthenticated) {
                 this.socket.emit('send_message', {
                     messageId: message.id,
                     text: message.text,
@@ -347,9 +370,10 @@ class TelegramMessaging {
                     timestamp: message.timestamp.toISOString()
                 });
                 
-                console.log('📡 Message sent via Socket.IO');
+                console.log('📡 Message sent via Socket.IO (authenticated)');
             } else {
                 // Fallback to API
+                console.log('🔄 Using API fallback (Socket.IO not available/authenticated)');
                 await this.sendMessageViaAPI(message);
                 console.log('📡 Message sent via API fallback');
             }
