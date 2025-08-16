@@ -213,12 +213,26 @@ class TelegramMessaging {
         
         console.log('🎯 Processing incoming message for chat:', telegramMessage.chatId);
         console.log('🎯 Current chat ID:', this.currentChat?.id);
+        console.log('🎯 Message senderId:', telegramMessage.senderId);
 
         // ALWAYS update the conversations list first (like Telegram)
         this.updateConversationsList(telegramMessage);
         
+        // Improved matching: Check if message belongs to current chat
+        // For 1-on-1 chats, message belongs to current chat if:
+        // 1. chatId matches current chat ID, OR
+        // 2. senderId matches current chat ID (message from the person we're chatting with), OR  
+        // 3. message is from current user to current chat partner
+        const belongsToCurrentChat = this.currentChat && (
+            telegramMessage.chatId === this.currentChat.id ||
+            telegramMessage.senderId === this.currentChat.id ||
+            (telegramMessage.senderId === this.currentUser?.id && this.currentChat.id)
+        );
+        
+        console.log('🎯 Message belongs to current chat:', belongsToCurrentChat);
+        
         // If we're currently viewing this chat, show the message immediately
-        if (this.currentChat && telegramMessage.chatId === this.currentChat.id) {
+        if (belongsToCurrentChat) {
             console.log('✅ Adding message to current chat view');
             this.renderMessage(telegramMessage);
             this.scrollToBottom();
@@ -425,11 +439,8 @@ class TelegramMessaging {
             message.status = 'sent';
             this.updateMessageStatus(message.id, 'sent');
             
-            // Reload messages to ensure persistence
-            setTimeout(() => {
-                console.log('🔄 Reloading messages to verify persistence...');
-                this.loadMessagesForCurrentChat();
-            }, 1000);
+            // Real-time messaging should handle persistence automatically
+            // No need to reload messages manually
 
         } catch (error) {
             console.error('❌ Send failed:', error);
