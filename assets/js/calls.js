@@ -34,9 +34,13 @@ const initializeCallInfo = () => {
     
     console.log('📞 Final call info:', callInfo);
     console.log('📞 Page title set to:', document.title);
+    console.log('📞 Call state should be:', callInfo.state);
     
     // Initialize audio system
     initializeAudioSystem();
+    
+    // Return the call info so it can be used immediately
+    return callInfo;
 };
 
 // Create fallback call info
@@ -189,7 +193,7 @@ const OutgoingCall = ({ setCallState }) => {
     return (
         <div className="w-full h-full flex flex-col items-center justify-center text-white text-center p-8">
             <img 
-                src="https://placehold.co/128x128/8A2BE2/FFFFFF?text=C" 
+                src={callInfo?.avatar || "https://placehold.co/128x128/8A2BE2/FFFFFF?text=C"} 
                 alt={callInfo?.contact} 
                 className="w-32 h-32 rounded-full border-4 border-purple-400 pulsing-avatar mb-6"
             />
@@ -245,7 +249,7 @@ const IncomingCall = ({ setCallState }) => {
     return (
         <div className="w-full h-full flex flex-col items-center justify-center text-white text-center p-8">
             <img 
-                src="https://placehold.co/128x128/8A2BE2/FFFFFF?text=C" 
+                src={callInfo?.avatar || "https://placehold.co/128x128/8A2BE2/FFFFFF?text=C"} 
                 alt={callInfo?.contact} 
                 className="w-32 h-32 rounded-full border-4 border-purple-400 pulsing-avatar mb-6"
             />
@@ -419,7 +423,7 @@ const ActiveCall = ({ setCallState }) => {
                 /* Voice Call UI */
                 <div className="w-full h-full flex flex-col items-center justify-center text-white">
                     <img 
-                        src="https://placehold.co/200x200/8A2BE2/FFFFFF?text=C" 
+                        src={callInfo?.avatar || "https://placehold.co/200x200/8A2BE2/FFFFFF?text=C"} 
                         alt={callInfo?.contact} 
                         className="w-48 h-48 rounded-full border-4 border-purple-400 mb-8"
                     />
@@ -520,14 +524,17 @@ const ActiveCall = ({ setCallState }) => {
 };
 
 const App = () => {
-    const [callState, setCallState] = React.useState(() => {
-        // Initialize based on stored call info or default to incoming
-        return callInfo?.state || 'incoming';
-    });
+    const [callState, setCallState] = React.useState('incoming'); // Default state
 
     React.useEffect(() => {
         // Initialize call info when app mounts
-        initializeCallInfo();
+        const loadedCallInfo = initializeCallInfo();
+        
+        // Set the correct call state after call info is loaded
+        if (loadedCallInfo && loadedCallInfo.state) {
+            console.log('🔄 Setting call state to:', loadedCallInfo.state);
+            setCallState(loadedCallInfo.state);
+        }
         
         // Global function to update call state
         window.updateCallState = setCallState;
