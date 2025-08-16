@@ -355,17 +355,19 @@ class RealTimeMessaging {
             
             if (data.success && data.messages) {
                 console.log(`📬 Loaded ${data.messages.length} messages from API`);
+                console.log('📋 First message structure:', data.messages[0]);
                 
                 // Clear existing messages
                 this.messages = [];
                 
                 // Add messages to array and render
                 data.messages.forEach(msg => {
+                    console.log('💾 Adding message:', msg);
                     this.messages.push(msg);
                 });
                 
                 // Render all messages
-                this.renderMessages();
+                this.renderAllMessages();
                 
                 // Scroll to bottom
                 this.scrollToBottom();
