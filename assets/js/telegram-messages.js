@@ -1610,6 +1610,12 @@ class TelegramCallSystem {
             console.log('📞 [TELEGRAM] WebRTC client prepared for call:', callId);
         }
 
+        // Step 7.5: Update call state in UI if available
+        if (window.updateCallState) {
+            console.log('🎨 [TELEGRAM] Updating UI call state to: requesting');
+            window.updateCallState('requesting');
+        }
+
         // Step 8: Send call request to server (Telegram's call.request)
         try {
             const callRequest = {
@@ -1631,6 +1637,12 @@ class TelegramCallSystem {
             callSession.state = 'ringing';
             callSession.connectionState = 'signaling';
             localStorage.setItem('currentCall', JSON.stringify(callSession));
+
+            // Update UI state
+            if (window.updateCallState) {
+                console.log('🎨 [TELEGRAM] Updating UI call state to: ringing');
+                window.updateCallState('ringing');
+            }
 
         } catch (error) {
             console.error('📞 [TELEGRAM] Failed to send call request:', error);

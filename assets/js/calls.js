@@ -374,7 +374,7 @@ const IncomingCall = ({ setCallState }) => {
             />
             <h1 className="text-4xl font-bold">{callInfo?.contact || 'Unknown User'}</h1>
             <p className="text-xl text-gray-400 mt-2">
-                {callInfo?.state === 'outgoing' 
+                {(callInfo?.state === 'outgoing' || callInfo?.state === 'requesting' || callInfo?.state === 'ringing' || callInfo?.direction === 'outgoing')
                     ? (callInfo?.type === 'video' ? 'Đang gọi video...' : 'Đang gọi...') 
                     : (callInfo?.type === 'video' ? 'Cuộc gọi video đến...' : 'Cuộc gọi thoại đến...')
                 }
@@ -684,16 +684,33 @@ const ActiveCall = ({ setCallState }) => {
 };
 
 const App = () => {
-    const [callState, setCallState] = React.useState('incoming'); // Default state
+    const [callState, setCallState] = React.useState('loading'); // Start with loading state
 
     React.useEffect(() => {
         // Initialize call info when app mounts
         const loadedCallInfo = initializeCallInfo();
         
         // Set the correct call state after call info is loaded
-        if (loadedCallInfo && loadedCallInfo.state) {
-            console.log('🔄 Setting call state to:', loadedCallInfo.state);
-            setCallState(loadedCallInfo.state);
+        if (loadedCallInfo && (loadedCallInfo.state || loadedCallInfo.direction)) {
+            // Handle Telegram-style call session
+            let finalState = loadedCallInfo.state;
+            
+            // Convert direction to state if needed
+            if (!finalState && loadedCallInfo.direction) {
+                finalState = loadedCallInfo.direction === 'outgoing' ? 'outgoing' : 'incoming';
+            }
+            
+            // Default fallback
+            if (!finalState) {
+                finalState = 'incoming';
+            }
+            
+            console.log('🔄 [TELEGRAM] Setting call state to:', finalState);
+            console.log('📞 Call session data:', loadedCallInfo);
+            setCallState(finalState);
+        } else {
+            console.warn('⚠️ No valid call state found, defaulting to incoming');
+            setCallState('incoming');
         }
         
         // Global function to update call state
@@ -701,16 +718,38 @@ const App = () => {
     }, []);
 
     const renderCallScreen = () => {
+        console.log('🎨 Rendering call screen for state:', callState);
+        
         switch(callState) {
             case 'outgoing':
+            case 'requesting':
+            case 'ringing':
+                console.log('📞 Rendering OutgoingCall component');
                 return <OutgoingCall setCallState={setCallState} />;
             case 'active':
+            case 'connected':
+                console.log('📞 Rendering ActiveCall component');
                 return <ActiveCall setCallState={setCallState} />;
             case 'incoming':
+                console.log('📞 Rendering IncomingCall component');
+                return <IncomingCall setCallState={setCallState} />;
+            case 'loading':
+                return (
+                    <div className="w-full h-full flex items-center justify-center text-white">
+                        <div className="text-center">
+                            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p>Đang tải cuộc gọi...</p>
+                        </div>
+                    </div>
+                );
             default:
+                console.warn('⚠️ Unknown call state:', callState, 'falling back to incoming');
                 return <IncomingCall setCallState={setCallState} />;
         }
     }
+                return <IncomingCall setCallState={setCallState} />;
+        }
+    };
 
     return (
         <div className="w-full h-full">
