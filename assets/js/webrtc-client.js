@@ -159,6 +159,8 @@ class WebRTCClient {
         const { callId, callerId, callerUsername, callType } = data;
         this.currentCallId = callId;
         
+        console.log('📞 WebRTC: Handling incoming call:', data);
+        
         // Store call info for the call page
         const callInfo = {
             callId,
@@ -170,24 +172,19 @@ class WebRTCClient {
         
         localStorage.setItem('currentCall', JSON.stringify(callInfo));
         
-        // Open call window if not already on call page
-        if (!window.location.pathname.includes('calls.html')) {
-            const callWindow = window.open(
-                '../pages/calls.html', 
-                'call_window', 
-                'width=800,height=600,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no'
-            );
-            
-            // Focus the call window
-            if (callWindow) {
-                callWindow.focus();
-            }
-        } else {
-            // Already on call page, update UI
+        // DON'T automatically open call window here
+        // Let telegram-messages.js handle the popup notification first
+        console.log('📞 WebRTC: Call info stored, waiting for user interaction');
+        
+        // If we're already on the call page, update the UI
+        if (window.location.pathname.includes('calls.html')) {
+            console.log('📞 WebRTC: Already on call page, updating UI');
             if (window.updateCallState) {
                 window.updateCallState('incoming');
             }
         }
+        
+        // The call window will be opened by telegram-messages.js showIncomingCallNotification
     }
 
     // Answer incoming call

@@ -1603,7 +1603,15 @@ class TelegramCallSystem {
     showIncomingCallNotification(callData) {
         const { callId, callerId, callerUsername, callType } = callData;
         
-        console.log('📞 Incoming call from:', callerUsername);
+        console.log('📞 Showing incoming call notification for:', callerUsername);
+        console.log('📞 Call data:', callData);
+        
+        // Remove any existing overlay first
+        const existingOverlay = document.getElementById('incoming-call-overlay');
+        if (existingOverlay) {
+            console.log('📞 Removing existing call overlay');
+            existingOverlay.remove();
+        }
         
         // Play ringtone
         if (this.ringtone) {
@@ -1654,10 +1662,12 @@ class TelegramCallSystem {
         `;
         
         document.body.appendChild(overlay);
+        console.log('📞 Incoming call overlay added to DOM');
         
         // Auto reject after 30 seconds
         setTimeout(() => {
             if (document.getElementById('incoming-call-overlay')) {
+                console.log('📞 Auto-rejecting call after 30 seconds');
                 this.rejectCall(callId);
             }
         }, 30000);
