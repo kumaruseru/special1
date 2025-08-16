@@ -4,26 +4,37 @@ let audioSystem = null;
 
 // Initialize call info from localStorage
 const initializeCallInfo = () => {
-    console.log('🔍 Checking localStorage for currentCall...');
+    console.log('🔍 [TELEGRAM] Checking localStorage for currentCall...');
     const storedCallInfo = localStorage.getItem('currentCall');
     console.log('🔍 Raw localStorage data:', storedCallInfo);
     
     if (storedCallInfo) {
         try {
             callInfo = JSON.parse(storedCallInfo);
-            console.log('📞 Successfully loaded call info:', callInfo);
+            console.log('📞 [TELEGRAM] Successfully loaded call session:', callInfo);
             
-            // Validate required fields
-            if (!callInfo.contact || !callInfo.type || !callInfo.state) {
-                console.warn('⚠️ Invalid call info, using fallback');
+            // Validate Telegram-style call session
+            if (!callInfo.contact && !callInfo.callee?.name) {
+                console.warn('⚠️ Invalid call session, using fallback');
                 callInfo = createFallbackCallInfo();
+            } else {
+                // Normalize call info for backward compatibility
+                if (callInfo.callee && !callInfo.contact) {
+                    callInfo.contact = callInfo.callee.name;
+                }
+                if (callInfo.caller && !callInfo.type) {
+                    callInfo.type = callInfo.callType || 'voice';
+                }
+                if (!callInfo.state && callInfo.direction) {
+                    callInfo.state = callInfo.direction === 'outgoing' ? 'outgoing' : 'incoming';
+                }
             }
         } catch (e) {
-            console.error('❌ Failed to parse call info:', e);
+            console.error('❌ Failed to parse call session:', e);
             callInfo = createFallbackCallInfo();
         }
     } else {
-        console.warn('⚠️ No stored call info found, using fallback');
+        console.warn('⚠️ No stored call session found, using fallback');
         callInfo = createFallbackCallInfo();
     }
     
@@ -32,7 +43,7 @@ const initializeCallInfo = () => {
     const callStateText = callInfo.state === 'outgoing' ? 'Cuộc gọi đi' : 'Cuộc gọi đến';
     document.title = `${callTypeText} - ${callInfo.contact}`;
     
-    console.log('📞 Final call info:', callInfo);
+    console.log('📞 [TELEGRAM] Final call session:', callInfo);
     console.log('📞 Page title set to:', document.title);
     console.log('📞 Call state should be:', callInfo.state);
     console.log('📞 Call ID available:', callInfo.callId || callInfo.contactId);
@@ -41,7 +52,7 @@ const initializeCallInfo = () => {
     if (window.webrtcClient && (callInfo.callId || callInfo.contactId)) {
         const callId = callInfo.callId || callInfo.contactId;
         window.webrtcClient.currentCallId = callId;
-        console.log('📞 Set WebRTC currentCallId on init:', callId);
+        console.log('📞 [TELEGRAM] Set WebRTC currentCallId on init:', callId);
     }
     
     // Initialize audio system

@@ -2475,18 +2475,21 @@ io.on('connection', (socket) => {
 
     // Initiate a call
     socket.on('initiate_call', (data) => {
-        const { targetUserId, callType } = data; // callType: 'voice' or 'video'
+        // Telegram-style call initiation with proper callId and caller data
+        const { callId, targetUserId, callType, callerData, timestamp } = data;
         
-        // Get caller info - try authenticated user first, then fallback to socket data
-        const callerId = socket.userId;
-        const callerUsername = socket.username || socket.email || 'Unknown User';
+        // Get caller info - prioritize from request data
+        const callerId = callerData?.id || socket.userId;
+        const callerUsername = callerData?.name || socket.username || socket.email || 'Unknown User';
+        const callerAvatar = callerData?.avatar || '';
         
-        console.log('📞 Initiate call request:', {
+        console.log('📞 [TELEGRAM] Initiate call request:', {
+            callId,
             callerId,
             callerUsername,
             targetUserId,
             callType,
-            isAuthenticated: socket.isAuthenticated
+            timestamp: new Date(timestamp).toISOString()
         });
         
         console.log('👥 Active users count:', activeUsers.size);
@@ -2497,16 +2500,26 @@ io.on('connection', (socket) => {
             isAuthenticated: user.isAuthenticated
         })));
         
+        // Validation
         if (!callerId || !targetUserId) {
             console.error('❌ Missing user data:', { callerId, targetUserId });
-            socket.emit('call_error', { error: 'Invalid user data - missing user IDs' });
+            socket.emit('call_error', { 
+                error: 'Invalid user data - missing user IDs',
+                callId: callId 
+            });
             return;
         }
 
         if (callerId === targetUserId) {
-            socket.emit('call_error', { error: 'Cannot call yourself' });
+            socket.emit('call_error', { 
+                error: 'Cannot call yourself',
+                callId: callId 
+            });
             return;
         }
+
+        // Use provided callId or generate new one
+        const finalCallId = callId || crypto.randomUUID();
 
         const targetUserData = activeUsers.get(targetUserId);
         console.log('🎯 Target user lookup result:', {
@@ -2522,41 +2535,56 @@ io.on('connection', (socket) => {
         if (!targetUserData) {
             console.error('❌ Target user not found in activeUsers:', targetUserId);
             console.log('📋 Available user IDs:', Array.from(activeUsers.keys()));
-            socket.emit('call_error', { error: 'User is offline or not found' });
+            socket.emit('call_error', { 
+                error: 'User is offline or not found',
+                callId: finalCallId 
+            });
             return;
         }
 
-        // Create call session
-        const callId = crypto.randomUUID();
+        // Create Telegram-style call session
         const callData = {
-            callId,
+            callId: finalCallId,
             callerId,
             callerUsername,
+            callerAvatar,
             targetUserId,
             callType,
             status: 'ringing',
-            startTime: new Date().toISOString()
+            direction: 'outgoing',
+            startTime: new Date().toISOString(),
+            requestTime: timestamp ? new Date(timestamp).toISOString() : new Date().toISOString()
         };
 
-        activeCalls.set(callId, callData);
-        console.log('✅ Call session created:', callId);
+        activeCalls.set(finalCallId, callData);
+        console.log('✅ [TELEGRAM] Call session created:', finalCallId);
 
-        // Notify target user
+        // Notify target user with Telegram-style call data
         console.log(`📤 Sending incoming_call to socketId: ${targetUserData.socketId}`);
         const callNotification = {
-            callId,
+            callId: finalCallId,
             callerId,
             callerUsername,
-            callType
+            callerAvatar,
+            callType,
+            timestamp: callData.startTime
         };
         console.log('📤 Call notification data:', callNotification);
         
         io.to(targetUserData.socketId).emit('incoming_call', callNotification);
 
-        // Confirm to caller
-        socket.emit('call_initiated', { callId, callData });
+        // Confirm to caller with Telegram-style response
+        socket.emit('call_initiated', { 
+            callId: finalCallId, 
+            status: 'ringing',
+            targetUser: {
+                id: targetUserId,
+                username: targetUserData.username
+            },
+            callData 
+        });
         
-        console.log(`📞 Call initiated: ${callerUsername} -> ${targetUserId} (${callType})`);
+        console.log(`📞 [TELEGRAM] Call initiated: ${callerUsername} -> ${targetUserId} (${callType})`);
     });
 
     // Answer call

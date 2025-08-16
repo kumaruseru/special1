@@ -1530,74 +1530,199 @@ class TelegramCallSystem {
     }
 
     async initiateCall(type) {
-        // Get current chat info
+        console.log(`📞 [TELEGRAM] Initiating ${type} call...`);
+        
+        // Step 1: Validate chat context (like Telegram)
         const currentChat = window.telegramMessaging?.currentChat;
         if (!currentChat || !currentChat.id) {
             this.showError('Vui lòng chọn cuộc trò chuyện để bắt đầu cuộc gọi');
             return;
         }
 
-        // Get chat user info
+        // Step 2: Get user info (like Telegram's user resolution)
         const chatUserName = document.getElementById('chat-user-name')?.textContent || 'Unknown User';
         const chatUserAvatar = document.getElementById('chat-user-avatar')?.src || '';
+        const currentUser = window.telegramMessaging.currentUser;
 
-        console.log(`📞 Initiating ${type} call to:`, chatUserName);
-
-        // Prepare call info for OUTGOING call
-        const callInfo = {
-            type: type, // 'voice' or 'video'
-            contact: chatUserName,
-            contactId: currentChat.id,
-            avatar: chatUserAvatar,
-            state: 'outgoing', // This is an outgoing call
-            timestamp: Date.now()
-        };
-
-        // Store call info for the call window
-        localStorage.setItem('currentCall', JSON.stringify(callInfo));
-
-        // Send call initiation through socket
-        if (window.telegramMessaging?.socket?.connected) {
-            console.log('📞 Client: Sending initiate_call with data:', {
-                targetUserId: currentChat.id,
-                callType: type,
-                callerName: window.telegramMessaging.currentUser?.name || 'Unknown',
-                callerAvatar: window.telegramMessaging.currentUser?.avatar || ''
-            });
-            console.log('📞 Client: Current user info:', window.telegramMessaging.currentUser);
-            console.log('📞 Client: Current chat info:', currentChat);
-            
-            window.telegramMessaging.socket.emit('initiate_call', {
-                targetUserId: currentChat.id,
-                callType: type,
-                callerName: window.telegramMessaging.currentUser?.name || 'Unknown',
-                callerAvatar: window.telegramMessaging.currentUser?.avatar || ''
-            });
-        } else {
-            console.error('❌ Socket not connected for call initiation');
+        if (!currentUser) {
+            this.showError('Không thể xác định người dùng hiện tại');
+            return;
         }
 
-        // Open call window
-        this.openCallWindow();
+        console.log(`📞 [TELEGRAM] Call details:`, {
+            caller: currentUser.name,
+            target: chatUserName,
+            type: type
+        });
+
+        // Step 3: Pre-call validation (like Telegram's pre-flight checks)
+        if (currentUser.id === currentChat.id) {
+            this.showError('Không thể gọi cho chính mình');
+            return;
+        }
+
+        // Check network connectivity
+        if (!window.telegramMessaging?.socket?.connected) {
+            this.showError('Mất kết nối mạng. Vui lòng kiểm tra kết nối internet.');
+            return;
+        }
+
+        // Step 4: Generate unique call ID (like Telegram's call_id)
+        const callId = crypto.randomUUID();
+        
+        // Step 5: Prepare call session (Telegram-style call object)
+        const callSession = {
+            callId: callId,
+            type: type,
+            state: 'requesting', // Telegram states: requesting -> ringing -> active -> ended
+            direction: 'outgoing',
+            
+            // Participants
+            caller: {
+                id: currentUser.id,
+                name: currentUser.name,
+                avatar: currentUser.avatar
+            },
+            callee: {
+                id: currentChat.id,
+                name: chatUserName,
+                avatar: chatUserAvatar
+            },
+            
+            // Timing
+            timestamp: Date.now(),
+            requestTime: new Date().toISOString(),
+            
+            // Connection details
+            connectionState: 'connecting',
+            localStream: null,
+            remoteStream: null
+        };
+
+        // Step 6: Store call session locally (like Telegram's call cache)
+        localStorage.setItem('currentCall', JSON.stringify(callSession));
+        localStorage.setItem('activeCallId', callId);
+
+        // Step 7: Initialize WebRTC client with call session
+        if (window.webrtcClient) {
+            window.webrtcClient.currentCallId = callId;
+            window.webrtcClient.callSession = callSession;
+            console.log('📞 [TELEGRAM] WebRTC client prepared for call:', callId);
+        }
+
+        // Step 8: Send call request to server (Telegram's call.request)
+        try {
+            const callRequest = {
+                callId: callId,
+                targetUserId: currentChat.id,
+                callType: type,
+                callerData: {
+                    id: currentUser.id,
+                    name: currentUser.name,
+                    avatar: currentUser.avatar
+                },
+                timestamp: Date.now()
+            };
+
+            console.log('📞 [TELEGRAM] Sending call request:', callRequest);
+            window.telegramMessaging.socket.emit('initiate_call', callRequest);
+
+            // Step 9: Update call state to "ringing" after request sent
+            callSession.state = 'ringing';
+            callSession.connectionState = 'signaling';
+            localStorage.setItem('currentCall', JSON.stringify(callSession));
+
+        } catch (error) {
+            console.error('📞 [TELEGRAM] Failed to send call request:', error);
+            this.showError('Không thể khởi tạo cuộc gọi. Vui lòng thử lại.');
+            return;
+        }
+
+        // Step 10: Open call interface (like Telegram's call window)
+        this.openCallWindow(callSession);
+        
+        // Step 11: Setup call timeout (like Telegram's 30s timeout)
+        this.setupCallTimeout(callId, 30000);
+        
+        console.log(`📞 [TELEGRAM] Call initiated successfully:`, callId);
     }
 
-    openCallWindow() {
-        // Open call window in new tab instead of popup
-        var callWindow = window.open(
+    // Telegram-style call window opening
+    openCallWindow(callSession) {
+        console.log('📞 [TELEGRAM] Opening call window for session:', callSession?.callId);
+        
+        // Open call window in new tab with proper sizing (like Telegram Desktop)
+        const callWindow = window.open(
             'calls.html',
-            '_blank',
-            'width=800,height=600'
+            `telegram_call_${callSession?.callId || 'unknown'}`, // Unique window name
+            'width=800,height=600,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no,location=no'
         );
 
         if (!callWindow) {
             this.showError('Không thể mở cửa sổ cuộc gọi. Vui lòng cho phép popup trong trình duyệt.');
+            if (callSession?.callId) {
+                this.endCall(callSession.callId);
+            }
             return;
         }
 
-        // Store reference
-        this.currentCall = callWindow;
+        // Store window reference for call management
+        this.currentCall = {
+            window: callWindow,
+            session: callSession
+        };
 
-        console.log('📞 Call window opened in new tab');
+        // Focus call window (like Telegram)
+        callWindow.focus();
+
+        console.log('📞 [TELEGRAM] Call window opened successfully');
+    }
+
+    // Telegram-style call timeout management
+    setupCallTimeout(callId, timeoutMs = 30000) {
+        console.log(`📞 [TELEGRAM] Setting up call timeout: ${timeoutMs}ms`);
+        
+        this.callTimeout = setTimeout(() => {
+            const activeCallId = localStorage.getItem('activeCallId');
+            if (activeCallId === callId) {
+                console.log('📞 [TELEGRAM] Call timeout reached, ending call');
+                this.endCall(callId, 'timeout');
+            }
+        }, timeoutMs);
+    }
+
+    // Telegram-style call termination
+    endCall(callId, reason = 'user') {
+        console.log(`📞 [TELEGRAM] Ending call: ${callId}, reason: ${reason}`);
+        
+        // Clear timeout
+        if (this.callTimeout) {
+            clearTimeout(this.callTimeout);
+            this.callTimeout = null;
+        }
+        
+        // Clean up storage
+        localStorage.removeItem('currentCall');
+        localStorage.removeItem('activeCallId');
+        
+        // Close call window
+        if (this.currentCall?.window) {
+            this.currentCall.window.close();
+            this.currentCall = null;
+        }
+        
+        // Notify server
+        if (window.telegramMessaging?.socket?.connected) {
+            window.telegramMessaging.socket.emit('end_call', {
+                callId: callId,
+                reason: reason
+            });
+        }
+        
+        // Clean up WebRTC
+        if (window.webrtcClient) {
+            window.webrtcClient.cleanup();
+        }
     }
 
     showIncomingCallNotification(callData) {
