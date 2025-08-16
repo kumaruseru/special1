@@ -689,6 +689,13 @@ const App = () => {
     React.useEffect(() => {
         // Initialize call info when app mounts
         const loadedCallInfo = initializeCallInfo();
+        console.log('📱 [TELEGRAM] App mounted, loaded call info:', loadedCallInfo);
+        
+        // Ensure callInfo is always available
+        if (!callInfo) {
+            console.warn('⚠️ callInfo not initialized, creating fallback');
+            callInfo = createFallbackCallInfo();
+        }
         
         // Set the correct call state after call info is loaded
         if (loadedCallInfo && (loadedCallInfo.state || loadedCallInfo.direction)) {
@@ -719,6 +726,19 @@ const App = () => {
 
     const renderCallScreen = () => {
         console.log('🎨 Rendering call screen for state:', callState);
+        
+        // Ensure callInfo is available before rendering
+        if (!callInfo) {
+            console.warn('⚠️ callInfo not available, showing loading state');
+            return (
+                <div className="w-full h-full flex items-center justify-center text-white">
+                    <div className="text-center">
+                        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p>Đang khởi tạo cuộc gọi...</p>
+                    </div>
+                </div>
+            );
+        }
         
         switch(callState) {
             case 'outgoing':
