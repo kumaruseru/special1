@@ -31,20 +31,39 @@ class TelegramMessaging {
             const sources = [
                 () => JSON.parse(localStorage.getItem('user') || '{}'),
                 () => JSON.parse(localStorage.getItem('userInfo') || '{}'),
-                () => window.loadUserInfo?.() || {},
-                () => ({ // Fallback demo user
-                    id: '689c9b9d1e859ae855bb1e01',
-                    name: 'Nghĩa Hoàng',
-                    username: 'nghia_hoang',
-                    avatar: 'https://placehold.co/48x48/4F46E5/FFFFFF?text=NH'
-                })
+                () => window.loadUserInfo?.() || {}
             ];
             
             for (const source of sources) {
                 const user = source();
                 if (user && user.id && user.name) {
-                    console.log('👤 User profile loaded:', user);
+                    console.log('👤 User profile loaded from source:', user);
                     return user;
+                }
+            }
+            
+            // Try to extract from userName/userEmail in localStorage
+            const userName = localStorage.getItem('userName');
+            const userEmail = localStorage.getItem('userEmail');
+            if (userName && userEmail) {
+                // Try to get user ID from token
+                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+                if (token) {
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        if (payload.userId) {
+                            const userFromToken = {
+                                id: payload.userId,
+                                name: userName,
+                                email: userEmail,
+                                username: userEmail.replace('@', '').replace('.', '_')
+                            };
+                            console.log('👤 User profile loaded from token:', userFromToken);
+                            return userFromToken;
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Failed to parse token:', e);
+                    }
                 }
             }
             
@@ -479,6 +498,17 @@ class TelegramMessaging {
             senderId: message.senderId,
             currentUserId: this.currentUser?.id,
             container: !!container
+        });
+        
+        // DEBUG: Let's see why message positioning is wrong
+        console.log('🔍 Message positioning debug:', {
+            'message.senderId': message.senderId,
+            'this.currentUser?.id': this.currentUser?.id,
+            'isOwn': isOwn,
+            'senderId type': typeof message.senderId,
+            'currentUserId type': typeof this.currentUser?.id,
+            'strict equality': message.senderId === this.currentUser?.id,
+            'loose equality': message.senderId == this.currentUser?.id
         });
 
         const messageEl = document.createElement('div');
