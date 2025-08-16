@@ -864,7 +864,7 @@ class TelegramMessaging {
         } else {
             // Create new conversation item if not exists
             console.log('➕ Creating new conversation item');
-            this.loadConversationsFromAPI(); // Reload conversations to get the new one
+            window.loadRealConversations(); // Reload conversations to get the new one
         }
     }
 
