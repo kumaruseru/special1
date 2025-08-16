@@ -357,6 +357,12 @@ class TelegramMessaging {
             // Update status
             message.status = 'sent';
             this.updateMessageStatus(message.id, 'sent');
+            
+            // Reload messages to ensure persistence
+            setTimeout(() => {
+                console.log('🔄 Reloading messages to verify persistence...');
+                this.loadMessagesForCurrentChat();
+            }, 1000);
 
         } catch (error) {
             console.error('❌ Send failed:', error);
@@ -366,6 +372,8 @@ class TelegramMessaging {
     }
 
     async sendMessageViaAPI(message) {
+        console.log('📤 Sending message via API:', message);
+        
         const response = await fetch(`/api/conversations/${message.chatId}/messages`, {
             method: 'POST',
             headers: {
@@ -378,14 +386,32 @@ class TelegramMessaging {
             })
         });
 
+        console.log('📡 API Response status:', response.status);
+        
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            const errorText = await response.text();
+            console.error('❌ API Error:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
         const result = await response.json();
+        console.log('✅ API Response:', result);
+        
         if (!result.success) {
             throw new Error(result.message || 'Send failed');
         }
+        
+        return result;
+    }
+    
+    async loadMessagesForCurrentChat() {
+        if (!this.currentChat || !this.currentChat.id) {
+            console.log('❌ No current chat to reload messages for');
+            return;
+        }
+        
+        console.log('🔄 Reloading messages for chat:', this.currentChat.id);
+        await this.loadChat(this.currentChat.id);
     }
 
     // === UI RENDERING ===
