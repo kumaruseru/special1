@@ -1696,11 +1696,18 @@ class TelegramCallSystem {
             });
         }
         
+        // Set callId in WebRTC client for proper call handling
+        if (window.webrtcClient) {
+            window.webrtcClient.currentCallId = callId;
+            console.log('📞 Set WebRTC currentCallId:', callId);
+        }
+        
         // Prepare call info for incoming call
         const callInfo = {
+            callId: callId,  // Add the actual callId
             type: callType,
             contact: callerUsername,
-            contactId: callId,
+            contactId: callId,  // Keep this for backward compatibility
             state: 'incoming',
             timestamp: Date.now()
         };

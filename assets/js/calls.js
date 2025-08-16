@@ -35,6 +35,14 @@ const initializeCallInfo = () => {
     console.log('📞 Final call info:', callInfo);
     console.log('📞 Page title set to:', document.title);
     console.log('📞 Call state should be:', callInfo.state);
+    console.log('📞 Call ID available:', callInfo.callId || callInfo.contactId);
+    
+    // Set WebRTC currentCallId if available
+    if (window.webrtcClient && (callInfo.callId || callInfo.contactId)) {
+        const callId = callInfo.callId || callInfo.contactId;
+        window.webrtcClient.currentCallId = callId;
+        console.log('📞 Set WebRTC currentCallId on init:', callId);
+    }
     
     // Initialize audio system
     initializeAudioSystem();
@@ -272,9 +280,26 @@ const IncomingCall = ({ setCallState }) => {
 
     const handleAcceptCall = async () => {
         try {
-            if (window.webrtcClient) {
+            console.log('✅ Accept call button clicked');
+            console.log('📞 Current call info:', callInfo);
+            
+            // Ensure WebRTC client has the callId
+            if (window.webrtcClient && callInfo?.callId) {
+                window.webrtcClient.currentCallId = callInfo.callId;
+                console.log('📞 Set WebRTC currentCallId:', callInfo.callId);
+                
                 await window.webrtcClient.answerCall(true);
                 setCallState('active');
+            } else if (window.webrtcClient && callInfo?.contactId) {
+                // Fallback to contactId if callId not available
+                window.webrtcClient.currentCallId = callInfo.contactId;
+                console.log('📞 Set WebRTC currentCallId (fallback):', callInfo.contactId);
+                
+                await window.webrtcClient.answerCall(true);
+                setCallState('active');
+            } else {
+                console.error('❌ No WebRTC client or call ID available');
+                alert('Không thể chấp nhận cuộc gọi. Vui lòng thử lại.');
             }
         } catch (error) {
             console.error('Error accepting call:', error);
