@@ -195,8 +195,16 @@ class WebRTCClient {
 
         try {
             if (accept) {
-                // Get user media
-                await this.getUserMedia();
+                console.log('📞 Answering call with ID:', this.currentCallId);
+                
+                // Get user media with fallback handling
+                try {
+                    await this.getUserMedia();
+                    console.log('✅ Media stream ready for call');
+                } catch (mediaError) {
+                    console.warn('⚠️ Media access failed, continuing with limited functionality:', mediaError.message);
+                    // Continue anyway - call might still work with remote audio
+                }
                 
                 // Initialize peer connection
                 this.initializePeerConnection();
@@ -207,7 +215,10 @@ class WebRTCClient {
                     answer: 'accept'
                 });
                 
+                console.log('✅ Call accepted and sent to server');
+                
             } else {
+                console.log('❌ Declining call');
                 // Decline call
                 this.socket.emit('answer_call', {
                     callId: this.currentCallId,
@@ -217,7 +228,7 @@ class WebRTCClient {
                 this.cleanup();
             }
         } catch (error) {
-            console.error('Error answering call:', error);
+            console.error('❌ Error answering call:', error);
             throw error;
         }
     }
@@ -243,7 +254,10 @@ class WebRTCClient {
     // Get user media (camera/microphone)
     async getUserMedia(callType = 'video') {
         try {
-            const constraints = {
+            console.log('🎥 Requesting media devices for call type:', callType);
+            
+            // First, try full constraints
+            let constraints = {
                 audio: true,
                 video: callType === 'video' ? {
                     width: { ideal: 1280 },
@@ -252,7 +266,28 @@ class WebRTCClient {
                 } : false
             };
 
-            this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            try {
+                this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log('✅ Media devices accessed successfully');
+            } catch (error) {
+                console.warn('⚠️ Full constraints failed, trying audio only:', error.message);
+                
+                // Fallback to audio only
+                constraints = { audio: true, video: false };
+                try {
+                    this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    console.log('✅ Audio-only media access successful');
+                } catch (audioError) {
+                    console.warn('⚠️ Audio access failed, creating dummy stream:', audioError.message);
+                    
+                    // Create a silent audio track for compatibility
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const destination = audioContext.createMediaStreamDestination();
+                    this.localStream = destination.stream;
+                    
+                    console.log('✅ Dummy audio stream created');
+                }
+            }
             
             // Notify UI that local stream is ready
             if (window.onLocalStreamReady) {
@@ -262,7 +297,7 @@ class WebRTCClient {
             return this.localStream;
             
         } catch (error) {
-            console.error('Error accessing media devices:', error);
+            console.error('❌ Fatal error accessing media devices:', error);
             throw error;
         }
     }

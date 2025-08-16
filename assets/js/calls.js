@@ -75,23 +75,64 @@ const createFallbackCallInfo = () => {
 // Audio system for call notifications
 const initializeAudioSystem = () => {
     audioSystem = {
-        ringtone: new Audio(),
-        callConnected: new Audio(),
-        callEnded: new Audio()
+        ringtone: null,
+        callConnected: null,
+        callEnded: null,
+        audioContext: null
     };
     
-    // Set volumes
-    audioSystem.ringtone.volume = 0.7;
-    audioSystem.callConnected.volume = 0.5;
-    audioSystem.callEnded.volume = 0.5;
+    // Initialize Web Audio Context for programmatic sounds
+    try {
+        audioSystem.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        console.log('🔊 Web Audio Context initialized');
+    } catch (e) {
+        console.warn('⚠️ Web Audio API not supported, using fallback');
+    }
+};
+
+// Generate ringtone using Web Audio API
+const playRingtone = () => {
+    if (!audioSystem?.audioContext) {
+        console.warn('⚠️ No audio context available for ringtone');
+        return null;
+    }
     
-    // Simple beep sounds using data URLs
-    audioSystem.ringtone.src = 'data:audio/wav;base64,UklGRsABAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
-    audioSystem.callConnected.src = 'data:audio/wav;base64,UklGRvIBAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
-    audioSystem.callEnded.src = 'data:audio/wav;base64,UklGRsACAABXQVZFZm10IAAAAAABAAABBACJAQABBQAAAAVAEAAAE=';
-    
-    // Enable looping for ringtone
-    audioSystem.ringtone.loop = true;
+    try {
+        const context = audioSystem.audioContext;
+        const oscillator = context.createOscillator();
+        const gainNode = context.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(context.destination);
+        
+        // Create ringtone pattern (like iPhone ringtone)
+        oscillator.frequency.setValueAtTime(800, context.currentTime);
+        oscillator.frequency.setValueAtTime(900, context.currentTime + 0.1);
+        oscillator.frequency.setValueAtTime(800, context.currentTime + 0.2);
+        
+        gainNode.gain.setValueAtTime(0.3, context.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 1);
+        
+        oscillator.start(context.currentTime);
+        oscillator.stop(context.currentTime + 1);
+        
+        return oscillator;
+    } catch (e) {
+        console.warn('⚠️ Error creating ringtone:', e);
+        return null;
+    }
+};
+
+// Stop ringtone
+const stopRingtone = () => {
+    if (audioSystem?.currentRingtone) {
+        try {
+            audioSystem.currentRingtone.stop();
+            audioSystem.currentRingtone = null;
+        } catch (e) {
+            // Oscillator might already be stopped
+        }
+    }
 };
 
 // Global callbacks for WebRTC client
@@ -276,16 +317,25 @@ const OutgoingCall = ({ setCallState }) => {
 const IncomingCall = ({ setCallState }) => {
     React.useEffect(() => {
         // Start ringtone for incoming call
-        if (audioSystem && audioSystem.ringtone) {
-            audioSystem.ringtone.play().catch(e => console.log('Ringtone play failed:', e));
+        console.log('🔔 Starting ringtone for incoming call');
+        
+        // Start ringtone with interval for continuous ringing
+        const ringtoneInterval = setInterval(() => {
+            if (audioSystem?.audioContext) {
+                audioSystem.currentRingtone = playRingtone();
+            }
+        }, 2000); // Ring every 2 seconds
+        
+        // Play first ringtone immediately
+        if (audioSystem?.audioContext) {
+            audioSystem.currentRingtone = playRingtone();
         }
         
         return () => {
             // Stop ringtone when component unmounts
-            if (audioSystem && audioSystem.ringtone) {
-                audioSystem.ringtone.pause();
-                audioSystem.ringtone.currentTime = 0;
-            }
+            console.log('🔕 Stopping ringtone');
+            clearInterval(ringtoneInterval);
+            stopRingtone();
         };
     }, []);
 
