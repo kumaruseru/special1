@@ -185,8 +185,44 @@ const OutgoingCall = ({ setCallState }) => {
     }, []);
 
     const handleEndCall = () => {
-        if (window.webrtcClient) {
+        console.log('🔴 End call button clicked');
+        
+        // Try multiple methods to end the call
+        let callEnded = false;
+        
+        // Method 1: Try webrtcClient
+        if (window.webrtcClient && typeof window.webrtcClient.endCall === 'function') {
+            console.log('📞 Ending call via webrtcClient');
             window.webrtcClient.endCall();
+            callEnded = true;
+        }
+        
+        // Method 2: Try direct socket emission
+        if (window.telegramMessaging?.socket?.connected) {
+            console.log('📞 Ending call via socket');
+            window.telegramMessaging.socket.emit('end_call');
+            callEnded = true;
+        }
+        
+        // Method 3: Trigger global end call callback
+        if (window.onCallEnded && typeof window.onCallEnded === 'function') {
+            console.log('📞 Triggering onCallEnded callback');
+            window.onCallEnded();
+            callEnded = true;
+        }
+        
+        // Method 4: Fallback - just close the window
+        if (!callEnded) {
+            console.log('📞 Fallback: closing call window');
+            // Clean up localStorage
+            localStorage.removeItem('currentCall');
+            
+            // Close window
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = '../pages/messages.html';
+            }
         }
     };
 
@@ -241,8 +277,44 @@ const IncomingCall = ({ setCallState }) => {
     };
 
     const handleDeclineCall = () => {
-        if (window.webrtcClient) {
+        console.log('🔴 Decline call button clicked');
+        
+        // Try multiple methods to decline the call
+        let callDeclined = false;
+        
+        // Method 1: Try webrtcClient
+        if (window.webrtcClient && typeof window.webrtcClient.answerCall === 'function') {
+            console.log('📞 Declining call via webrtcClient');
             window.webrtcClient.answerCall(false);
+            callDeclined = true;
+        }
+        
+        // Method 2: Try direct socket emission
+        if (window.telegramMessaging?.socket?.connected) {
+            console.log('📞 Declining call via socket');
+            window.telegramMessaging.socket.emit('decline_call');
+            callDeclined = true;
+        }
+        
+        // Method 3: Trigger global decline call callback
+        if (window.onCallDeclined && typeof window.onCallDeclined === 'function') {
+            console.log('📞 Triggering onCallDeclined callback');
+            window.onCallDeclined();
+            callDeclined = true;
+        }
+        
+        // Method 4: Fallback - just close the window
+        if (!callDeclined) {
+            console.log('📞 Fallback: closing call window');
+            // Clean up localStorage
+            localStorage.removeItem('currentCall');
+            
+            // Close window
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = '../pages/messages.html';
+            }
         }
     };
 
@@ -352,8 +424,44 @@ const ActiveCall = ({ setCallState }) => {
     };
 
     const handleEndCall = () => {
-        if (window.webrtcClient) {
+        console.log('🔴 End call button clicked (ActiveCall)');
+        
+        // Try multiple methods to end the call
+        let callEnded = false;
+        
+        // Method 1: Try webrtcClient
+        if (window.webrtcClient && typeof window.webrtcClient.endCall === 'function') {
+            console.log('📞 Ending call via webrtcClient');
             window.webrtcClient.endCall();
+            callEnded = true;
+        }
+        
+        // Method 2: Try direct socket emission
+        if (window.telegramMessaging?.socket?.connected) {
+            console.log('📞 Ending call via socket');
+            window.telegramMessaging.socket.emit('end_call');
+            callEnded = true;
+        }
+        
+        // Method 3: Trigger global end call callback
+        if (window.onCallEnded && typeof window.onCallEnded === 'function') {
+            console.log('📞 Triggering onCallEnded callback');
+            window.onCallEnded();
+            callEnded = true;
+        }
+        
+        // Method 4: Fallback - just close the window
+        if (!callEnded) {
+            console.log('📞 Fallback: closing call window');
+            // Clean up localStorage
+            localStorage.removeItem('currentCall');
+            
+            // Close window
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = '../pages/messages.html';
+            }
         }
     };
 
