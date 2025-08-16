@@ -18,10 +18,64 @@ class RealTimeMessaging {
         // Start message polling as fallback
         this.startMessagePolling();
         
+        // Restore previous conversation if exists
+        this.restorePreviousConversation();
+        
         // Check for direct message after a short delay to ensure DOM is ready
         setTimeout(() => {
             this.checkForDirectMessage();
         }, 100);
+    }
+
+    restorePreviousConversation() {
+        console.log('🔄 Restoring previous conversation...');
+        
+        const savedChatId = localStorage.getItem('currentChatId');
+        const savedChatUser = localStorage.getItem('currentChatUser');
+        
+        if (savedChatId && savedChatUser) {
+            try {
+                const chatUser = JSON.parse(savedChatUser);
+                console.log('📨 Found saved conversation:', savedChatId, chatUser);
+                
+                // Set current chat
+                this.currentChatId = savedChatId;
+                
+                // Load messages for this conversation
+                this.loadConversationMessages({
+                    id: savedChatId,
+                    name: chatUser.name || 'Người dùng',
+                    avatar: chatUser.avatar
+                });
+                
+                // Update UI
+                this.updateChatLayout();
+                this.updateChatHeaderWithUser(chatUser);
+                
+                // Highlight the conversation in the list
+                setTimeout(() => {
+                    document.querySelectorAll('.conversation-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    document.querySelector(`[data-conversation-id="${savedChatId}"]`)?.classList.add('active');
+                }, 500);
+                
+                // Enable message input
+                if (this.messageInput) {
+                    this.messageInput.disabled = false;
+                    this.messageInput.placeholder = `Nhập tin nhắn cho ${chatUser.name || 'người dùng'}...`;
+                }
+                
+                console.log('✅ Previous conversation restored successfully');
+                
+            } catch (error) {
+                console.error('❌ Failed to restore previous conversation:', error);
+                localStorage.removeItem('currentChatId');
+                localStorage.removeItem('currentChatUser');
+            }
+        } else {
+            console.log('📭 No previous conversation to restore');
+        }
     }
 
     checkForDirectMessage() {
@@ -2540,6 +2594,10 @@ window.selectConversation = function(conversationId, userName, userAvatar) {
     // Update current chat
     window.realTimeMessaging.currentChatId = conversationId;
     localStorage.setItem('currentChatId', conversationId);
+    localStorage.setItem('currentChatUser', JSON.stringify({
+        name: userName,
+        avatar: userAvatar
+    }));
     
     // Update active conversation in UI
     document.querySelectorAll('.conversation-item').forEach(item => {
@@ -2552,6 +2610,14 @@ window.selectConversation = function(conversationId, userName, userAvatar) {
     
     // Update chat header with selected user
     window.realTimeMessaging.updateChatHeaderWithUser({
+        name: userName,
+        avatar: userAvatar
+    });
+    
+    // Load messages for this conversation
+    console.log('📨 Loading messages for selected conversation:', conversationId);
+    window.realTimeMessaging.loadConversationMessages({
+        id: conversationId,
         name: userName,
         avatar: userAvatar
     });
