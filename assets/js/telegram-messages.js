@@ -1563,8 +1563,9 @@ class TelegramCallSystem {
         this.openCallWindow();
     }
 
+    openCallWindow() {
         // Open call window in new tab instead of popup
-        const callWindow = window.open(
+        var callWindow = window.open(
             'calls.html',
             '_blank',
             'width=800,height=600'
@@ -1770,7 +1771,7 @@ class TelegramCallSystem {
 }
 
 // Initialize call system
-const telegramCallSystem = new TelegramCallSystem();
+var telegramCallSystem = new TelegramCallSystem();
 
 // Make it globally accessible
 window.telegramCallSystem = telegramCallSystem;
