@@ -1,3 +1,6 @@
+// Debug environment before loading dotenv
+console.log('🔍 NODE_ENV before dotenv:', process.env.NODE_ENV);
+
 // Load environment variables only in development
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
@@ -5,6 +8,8 @@ if (process.env.NODE_ENV !== 'production') {
 } else {
     console.log('🚀 Production mode - using environment variables from deployment platform');
 }
+
+console.log('🔍 NODE_ENV after dotenv:', process.env.NODE_ENV);
 const express = require('express');
 const mongoose = require('mongoose');
 const { ObjectId } = require('mongodb');
@@ -1054,6 +1059,11 @@ app.get('/health', async (req, res) => {
     res.json(healthStatus);
 });
 
+// Simple ping endpoint for Render port detection
+app.get('/ping', (req, res) => {
+    res.json({ status: 'ok', message: 'Server is running' });
+});
+
 app.get('/api/status', async (req, res) => {
     try {
         const status = {
@@ -1157,8 +1167,7 @@ async function startServer() {
         console.log('📍 HOST env var:', process.env.HOST);
         console.log('📍 Computed Host:', HOST);
         
-        await dbManager.initialize();
-        
+        // Start server first, then initialize databases
         server.listen(PORT, HOST, () => {
             logger.info(`Production server running on ${HOST}:${PORT}`);
             console.log(`🚀 Server listening on ${HOST}:${PORT}`);
@@ -1172,10 +1181,18 @@ async function startServer() {
             logger.error('Server error', { error: error.message });
         });
         
+        // Initialize databases after server is listening
+        console.log('🔄 Initializing databases...');
+        await dbManager.initialize();
+        console.log('✅ Database initialization completed');
+        
     } catch (error) {
         console.error('❌ Failed to start server:', error);
         logger.error('Failed to start server', { error: error.message });
-        process.exit(1);
+        // Don't exit in production, let the server run without databases if needed
+        if (process.env.NODE_ENV !== 'production') {
+            process.exit(1);
+        }
     }
 }
 
