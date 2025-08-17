@@ -6,15 +6,13 @@ services:
     plan: free
     buildCommand: npm install --production
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /health
     rootDir: .
     env: node
     region: oregon
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: HOST
         value: 0.0.0.0
       - key: JWT_SECRET

@@ -1146,8 +1146,10 @@ async function startServer() {
     try {
         console.log('🚀 Starting server initialization...');
         console.log('📍 Environment:', process.env.NODE_ENV || 'development');
-        console.log('📍 Port:', PORT);
-        console.log('📍 Host:', HOST);
+        console.log('📍 PORT env var:', process.env.PORT);
+        console.log('📍 Computed Port:', PORT);
+        console.log('📍 HOST env var:', process.env.HOST);
+        console.log('📍 Computed Host:', HOST);
         
         await dbManager.initialize();
         
