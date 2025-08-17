@@ -1140,15 +1140,32 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 async function startServer() {
     try {
+        console.log('🚀 Starting server initialization...');
+        console.log('📍 Environment:', process.env.NODE_ENV || 'development');
+        console.log('📍 Port:', PORT);
+        console.log('📍 Host:', HOST);
+        
         await dbManager.initialize();
         
-        server.listen(PORT, () => {
-            logger.info(`Production server running on port ${PORT}`);
+        server.listen(PORT, HOST, () => {
+            logger.info(`Production server running on ${HOST}:${PORT}`);
+            console.log(`🚀 Server listening on ${HOST}:${PORT}`);
+            console.log(`🔗 Health Check: http://${HOST}:${PORT}/health`);
+            console.log('✅ Server started successfully!');
         });
+        
+        // Add error handling for server startup
+        server.on('error', (error) => {
+            console.error('❌ Server error:', error);
+            logger.error('Server error', { error: error.message });
+        });
+        
     } catch (error) {
+        console.error('❌ Failed to start server:', error);
         logger.error('Failed to start server', { error: error.message });
         process.exit(1);
     }
