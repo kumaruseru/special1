@@ -212,6 +212,9 @@ const UserSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Create User model
+const User = mongoose.model('User', UserSchema);
+
 const MessageSchema = new mongoose.Schema({
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
