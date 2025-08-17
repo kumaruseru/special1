@@ -1,0 +1,67 @@
+services:
+  # Main Web Service
+  - type: web
+    name: cosmic-social-network
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    rootDir: .
+    env: node
+    region: oregon
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: BCRYPT_ROUNDS
+        value: 12
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: cosmic-social-network
+          property: host
+      - key: HELMET_ENABLED
+        value: true
+      - key: XSS_PROTECTION
+        value: true
+      # Database configurations will be added manually
+      - key: MONGODB_URI
+        value: # Add your MongoDB Atlas connection string
+      - key: MONGODB_DB_NAME
+        value: cosmic_social_network
+      - key: POSTGRES_HOST
+        value: # Add your PostgreSQL host
+      - key: POSTGRES_PORT
+        value: 25060
+      - key: POSTGRES_DB
+        value: # Add your database name
+      - key: POSTGRES_USER
+        value: # Add your username
+      - key: POSTGRES_PASSWORD
+        value: # Add your password
+      - key: POSTGRES_SSL
+        value: require
+      - key: REDIS_HOST
+        value: # Add your Redis host
+      - key: REDIS_PORT
+        value: 18851
+      - key: REDIS_PASSWORD
+        value: # Add your Redis password
+      - key: NEO4J_URI
+        value: # Add your Neo4j URI
+      - key: NEO4J_USER
+        value: neo4j
+      - key: NEO4J_PASSWORD
+        value: # Add your Neo4j password
