@@ -11,8 +11,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 
 // Production logging
-const ProductionLogger = require('./utils/logger');
-const logger = new ProductionLogger();
+const logger = require('./utils/logger');
 
 // Email functionality
 const { 
