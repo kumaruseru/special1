@@ -4,13 +4,14 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// Validate required environment variables
+// Validate required environment variables - make optional for deployment
+let emailEnabled = true;
 if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    console.error('❌ CRITICAL: EMAIL_USER and EMAIL_PASSWORD must be set in environment variables');
-    console.error('Add these to your .env file:');
-    console.error('EMAIL_USER=your-email@domain.com');
-    console.error('EMAIL_PASSWORD=your-secure-password');
-    process.exit(1);
+    console.warn('⚠️ WARNING: EMAIL_USER and EMAIL_PASSWORD not set - Email functionality disabled');
+    console.warn('To enable email features, add these to your environment variables:');
+    console.warn('EMAIL_USER=your-email@domain.com');
+    console.warn('EMAIL_PASSWORD=your-secure-password');
+    emailEnabled = false;
 }
 
 const emailConfig = {
@@ -29,11 +30,19 @@ const emailConfig = {
 
 // Create transporter
 const createEmailTransporter = () => {
+    if (!emailEnabled) {
+        return null;
+    }
     return nodemailer.createTransporter(emailConfig);
 };
 
 // Send welcome email
 const sendWelcomeEmail = async (userEmail, userName) => {
+    if (!emailEnabled) {
+        console.log('Email disabled - Skipping welcome email for:', userEmail);
+        return { success: true, message: 'Email disabled - welcome email skipped' };
+    }
+    
     const transporter = createEmailTransporter();
     
     const mailOptions = {
@@ -91,6 +100,11 @@ const sendWelcomeEmail = async (userEmail, userName) => {
 
 // Send password reset email
 const sendPasswordResetEmail = async (userEmail, resetToken, userName) => {
+    if (!emailEnabled) {
+        console.log('Email disabled - Skipping password reset email for:', userEmail);
+        return { success: true, message: 'Email disabled - password reset email skipped' };
+    }
+    
     const transporter = createEmailTransporter();
     const resetLink = `https://cown.name.vn/pages/reset-password?token=${resetToken}`;
     
@@ -150,6 +164,11 @@ const sendPasswordResetEmail = async (userEmail, resetToken, userName) => {
 
 // Send verification email
 const sendVerificationEmail = async (userEmail, verificationToken, userName) => {
+    if (!emailEnabled) {
+        console.log('Email disabled - Skipping verification email for:', userEmail);
+        return { success: true, message: 'Email disabled - verification email skipped' };
+    }
+    
     const transporter = createEmailTransporter();
     const verificationLink = `https://cown.name.vn/verify-email?token=${verificationToken}`;
     
@@ -207,6 +226,11 @@ const sendVerificationEmail = async (userEmail, verificationToken, userName) => 
 
 // Send notification email
 const sendNotificationEmail = async (userEmail, userName, notificationType, content) => {
+    if (!emailEnabled) {
+        console.log('Email disabled - Skipping notification email for:', userEmail);
+        return { success: true, message: 'Email disabled - notification email skipped' };
+    }
+    
     const transporter = createEmailTransporter();
     
     const notifications = {
@@ -273,6 +297,11 @@ const sendNotificationEmail = async (userEmail, userName, notificationType, cont
 
 // Test email connection
 const testEmailConnection = async () => {
+    if (!emailEnabled) {
+        console.log('Email disabled - Skipping connection test');
+        return { success: true, message: 'Email disabled - connection test skipped' };
+    }
+    
     const transporter = createEmailTransporter();
     
     try {
@@ -287,6 +316,7 @@ const testEmailConnection = async () => {
 
 module.exports = {
     emailConfig,
+    emailEnabled,
     createEmailTransporter,
     sendWelcomeEmail,
     sendPasswordResetEmail,
