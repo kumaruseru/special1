@@ -36,6 +36,17 @@ services:
         value: true
       - key: XSS_PROTECTION
         value: true
+      # Email configuration
+      - key: EMAIL_USER
+        value: noreply@cown.name.vn
+      - key: EMAIL_PASSWORD
+        value: # Add your email password in Render dashboard
+      - key: SMTP_HOST
+        value: cown.name.vn
+      - key: SMTP_PORT
+        value: 465
+      - key: SMTP_SECURE
+        value: true
       # Database configurations will be added manually
       - key: MONGODB_URI
         value: # Add your MongoDB Atlas connection string
