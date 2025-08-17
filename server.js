@@ -427,16 +427,25 @@ const authenticateToken = async (req, res, next) => {
 
 // === AUTHENTICATION ROUTES ===
 app.post('/api/register', async (req, res) => {
+    console.log('Registration API called');
+    console.log('Request body:', req.body);
+    
     try {
         const { email, password, fullName, username } = req.body;
 
+        // Debug checks
+        console.log('MongoDB connection state:', mongoose.connection.readyState);
+        console.log('User model available:', !!User);
+
         if (!email || !password || !fullName) {
+            console.log('Missing required fields');
             return res.status(400).json({
                 success: false,
                 message: 'Email, password, and full name are required'
             });
         }
 
+        console.log('Checking for existing user...');
         const existingUser = await User.findOne({
             $or: [
                 { email: email.toLowerCase() },
@@ -445,15 +454,18 @@ app.post('/api/register', async (req, res) => {
         });
 
         if (existingUser) {
+            console.log('User already exists:', existingUser.email);
             return res.status(400).json({
                 success: false,
                 message: existingUser.email === email.toLowerCase() ? 'Email already exists' : 'Username already exists'
             });
         }
 
+        console.log('Hashing password...');
         const hashedPassword = await bcrypt.hash(password, 12);
         const verificationToken = crypto.randomBytes(32).toString('hex');
 
+        console.log('Creating user object...');
         const user = new User({
             email: email.toLowerCase(),
             password: hashedPassword,
@@ -463,14 +475,22 @@ app.post('/api/register', async (req, res) => {
             avatar: `https://placehold.co/150x150/4F46E5/FFFFFF?text=${fullName.charAt(0).toUpperCase()}`
         });
 
+        console.log('Saving user to database...');
         await user.save();
+        console.log('User saved successfully:', user._id);
 
         try {
-            await sendWelcomeEmail(email, fullName, verificationToken);
+            if (process.env.EMAIL_SERVICE && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+                await sendWelcomeEmail(email, fullName, verificationToken);
+                console.log('Welcome email sent');
+            } else {
+                console.log('Email not configured, skipping welcome email');
+            }
         } catch (emailError) {
-            logger.error('Welcome email failed', { error: emailError.message });
+            console.error('Welcome email failed:', emailError.message);
         }
 
+        console.log('Generating JWT token...');
         const token = jwt.sign(
             { userId: user._id, email: user.email },
             process.env.JWT_SECRET || 'default_secret',
@@ -492,10 +512,19 @@ app.post('/api/register', async (req, res) => {
         });
 
     } catch (error) {
+        console.error('Registration error details:');
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('Error name:', error.name);
+        
         logger.error('Registration error', { error: error.message });
         res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error',
+            debug: {
+                error: error.message,
+                name: error.name
+            }
         });
     }
 });
