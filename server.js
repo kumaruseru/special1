@@ -1,4 +1,10 @@
-require('dotenv').config();
+// Load environment variables only in development
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+    console.log('🔧 Loaded .env file for development');
+} else {
+    console.log('🚀 Production mode - using environment variables from deployment platform');
+}
 const express = require('express');
 const mongoose = require('mongoose');
 const { ObjectId } = require('mongodb');
@@ -1139,7 +1145,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT, 10) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function startServer() {
