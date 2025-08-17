@@ -1,0 +1,45 @@
+{
+  "timestamp": "2025-08-17T01:06:56.061Z",
+  "securityScore": 100,
+  "totalTests": 6,
+  "passedTests": 6,
+  "failedTests": 0,
+  "results": [
+    {
+      "name": "SecurityUtils Exists",
+      "success": true,
+      "error": null,
+      "details": "SecurityUtils.js exists with all required functions"
+    },
+    {
+      "name": "Telegram Messages Protection",
+      "success": true,
+      "error": null,
+      "details": "Found 27 safe innerHTML implementations"
+    },
+    {
+      "name": "Unsafe JSON Parsing",
+      "success": true,
+      "error": null,
+      "details": "Found 8 safe JSON parsing implementations"
+    },
+    {
+      "name": "HTML Security Imports",
+      "success": true,
+      "error": null,
+      "details": "All 13 HTML files load SecurityUtils"
+    },
+    {
+      "name": "XSS Payload Sanitization",
+      "success": true,
+      "error": null,
+      "details": "XSS sanitization functions are properly implemented"
+    },
+    {
+      "name": "Server Security Configuration",
+      "success": true,
+      "error": null,
+      "details": "All server security features are present"
+    }
+  ]
+}

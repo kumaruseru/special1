@@ -4,17 +4,26 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+// Validate required environment variables
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    console.error('❌ CRITICAL: EMAIL_USER and EMAIL_PASSWORD must be set in environment variables');
+    console.error('Add these to your .env file:');
+    console.error('EMAIL_USER=your-email@domain.com');
+    console.error('EMAIL_PASSWORD=your-secure-password');
+    process.exit(1);
+}
+
 const emailConfig = {
     service: 'gmail', // or your hosting provider's SMTP
-    host: 'smtp.cown.name.vn', // Update with your hosting SMTP
-    port: 587,
-    secure: false, // true for 465, false for other ports
+    host: process.env.SMTP_HOST || 'smtp.cown.name.vn',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
     auth: {
-        user: process.env.EMAIL_USER || 'noreply@cown.name.vn',
-        pass: process.env.EMAIL_PASSWORD || 'Huong1505@'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
     },
     tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: process.env.NODE_ENV === 'production'
     }
 };
 
@@ -28,7 +37,7 @@ const sendWelcomeEmail = async (userEmail, userName) => {
     const transporter = createEmailTransporter();
     
     const mailOptions = {
-        from: '"Cosmic Social Network" <noreply@cown.name.vn>',
+        from: `"Cosmic Social Network" <${process.env.EMAIL_USER}>`,
         to: userEmail,
         subject: '🌌 Welcome to Cosmic Social Network!',
         html: `
