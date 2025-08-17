@@ -35,16 +35,18 @@
             
             <!-- Login Form -->
             <div class="w-full">
-                <div class="space-y-4">
-                    <input type="email" placeholder="Nhập email của bạn" class="w-full p-3 rounded-lg form-input" />
-                    <input type="password" placeholder="Nhập mật khẩu của bạn" class="w-full p-3 rounded-lg form-input" />
+                <form id="loginForm" class="space-y-4">
+                    <input id="emailInput" type="email" placeholder="Nhập email của bạn" class="w-full p-3 rounded-lg form-input" required />
+                    <input id="passwordInput" type="password" placeholder="Nhập mật khẩu của bạn" class="w-full p-3 rounded-lg form-input" required />
                     <div class="flex justify-between items-center text-sm">
-                        <label class="flex items-center text-gray-300"><input type="checkbox" class="mr-2 rounded" />Ghi nhớ tôi</label>
+                        <label class="flex items-center text-gray-300">
+                            <input id="rememberCheckbox" type="checkbox" class="mr-2 rounded" />Ghi nhớ tôi
+                        </label>
                         <a href="forgot-password.html" class="form-link transition">Quên mật khẩu?</a>
                     </div>
-                    <button class="w-full p-3 rounded-lg font-bold form-button">Đăng Nhập</button>
+                    <button id="loginButton" type="submit" class="w-full p-3 rounded-lg font-bold form-button">Đăng Nhập</button>
                     <p class="text-center text-gray-300 text-sm">Chưa có tài khoản? <a href="register.html" class="font-semibold form-link transition">Đăng ký miễn phí</a></p>
-                </div>
+                </form>
 
                 <!-- Divider -->
                 <div class="flex items-center my-6">

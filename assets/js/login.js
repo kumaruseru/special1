@@ -143,57 +143,71 @@ window.onload = function() {
 
 // Login form functionality
 function initLoginForm() {
-    const loginButton = document.querySelector('.form-button');
-    const emailInput = document.querySelector('input[type="email"]');
-    const passwordInput = document.querySelector('input[type="password"]');
-    const rememberCheckbox = document.querySelector('input[type="checkbox"]');
+    // Use IDs for more reliable element selection
+    const loginButton = document.getElementById('loginButton') || document.querySelector('.form-button');
+    const emailInput = document.getElementById('emailInput') || document.querySelector('input[type="email"]');
+    const passwordInput = document.getElementById('passwordInput') || document.querySelector('input[type="password"]');
+    const rememberCheckbox = document.getElementById('rememberCheckbox') || document.querySelector('input[type="checkbox"]');
+    const loginForm = document.getElementById('loginForm');
 
-    if (loginButton) {
-        loginButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const email = emailInput.value.trim();
-            const password = passwordInput.value.trim();
-            
-            // Simple validation
-            if (!email || !password) {
-                alert('Vui lòng nhập đầy đủ email và mật khẩu!');
-                return;
+    // Add null checks for all elements
+    if (!loginButton || !emailInput || !passwordInput) {
+        console.error('Login form elements not found');
+        return;
+    }
+
+    // Handle form submission
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLoginSubmit);
+    } else {
+        loginButton.addEventListener('click', handleLoginSubmit);
+    }
+
+    function handleLoginSubmit(e) {
+        e.preventDefault();
+        
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+        
+        // Simple validation
+        if (!email || !password) {
+            alert('Vui lòng nhập đầy đủ email và mật khẩu!');
+            return;
+        }
+        
+        if (!isValidEmail(email)) {
+            alert('Vui lòng nhập email hợp lệ!');
+            return;
+        }
+        
+        // Simulate login process
+        loginButton.textContent = 'Đang đăng nhập...';
+        loginButton.disabled = true;
+        
+        // First, get user salt from server
+        fetch('/api/get-salt', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: email })
+        })
+        .then(response => response.json())
+        .then(saltData => {
+            if (!saltData.success) {
+                throw new Error(saltData.message);
             }
             
-            if (!isValidEmail(email)) {
-                alert('Vui lòng nhập email hợp lệ!');
-                return;
-            }
+            // Hash password with salt
+            const hashedPassword = CryptoJS.SHA256(password + saltData.salt).toString();
             
-            // Simulate login process
-            loginButton.textContent = 'Đang đăng nhập...';
-            loginButton.disabled = true;
-            
-            // First, get user salt from server
-            fetch('/api/get-salt', {
+            // Now call login API
+            return fetch('/api/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email: email })
-            })
-            .then(response => response.json())
-            .then(saltData => {
-                if (!saltData.success) {
-                    throw new Error(saltData.message);
-                }
-                
-                // Hash password with salt
-                const hashedPassword = CryptoJS.SHA256(password + saltData.salt).toString();
-                
-                // Now call login API
-                return fetch('/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
+                body: JSON.stringify({
                         email: email,
                         password: hashedPassword
                     })
@@ -223,19 +237,18 @@ function initLoginForm() {
                     // Show error message
                     alert('❌ ' + data.message);
                     
-                    // Reset button state
-                    loginButton.textContent = 'Đăng Nhập';
-                    loginButton.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('Login error:', error);
-                alert('❌ Có lỗi xảy ra. Vui lòng thử lại sau!');
-                
                 // Reset button state
                 loginButton.textContent = 'Đăng Nhập';
                 loginButton.disabled = false;
-            });
+            }
+        })
+        .catch(error => {
+            console.error('Login error:', error);
+            alert('❌ Có lỗi xảy ra. Vui lòng thử lại sau!');
+            
+            // Reset button state
+            loginButton.textContent = 'Đăng Nhập';
+            loginButton.disabled = false;
         });
     }
 
@@ -244,7 +257,7 @@ function initLoginForm() {
         if (input) {
             input.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
-                    loginButton.click();
+                    handleLoginSubmit(e);
                 }
             });
         }
